@@ -32,7 +32,7 @@ router.post('/addmanufacturer', async (req, res) => {
             return res.status(400).json({ message: 'Invalid request' });
         }
         const result = await connection.query(
-            'INSERT INTO SystemMaster (manufacturerid, manufacturername, logoid) VALUES (?, ?, ?)',
+            'INSERT INTO ManufacturerMaster (manufacturerid, manufacturername, logoid) VALUES (?, ?, ?)',
             [manufacturerid, manufacturername, logoid]
         );
         connection.release();
