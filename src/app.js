@@ -9,7 +9,7 @@ require("./db/connection");
 console.log(process.env.PORT)
 PORT = process.env.PORT || 3000;
 
-const Create_User_Router = require("./routers/Create_Users");
+const ARS = require("./routers/ARS");
 
 const app = express();
 app.use(cors());
@@ -24,7 +24,7 @@ app.use(express.json({ limit: '50mb' }));
 //     next();
 // });
 
-app.use('/api', Create_User_Router);
+app.use('/api', ARS);
 
 app.listen(PORT, () => {
     console.log(`connection is setup at ${PORT}`);
