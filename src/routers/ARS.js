@@ -20,6 +20,8 @@ router.post('/addCredential', async (req, res) => {
     }
 });
 
+
+
 router.get('/clients', async (req, res) => {
     try {
         const connection = await getConnection();
@@ -46,17 +48,42 @@ router.get('/clients', async (req, res) => {
     }
 });
 
+
+router.get('/client/databases', async (req, res) => {
+    try {
+        const connection = await getConnection();
+        const [rows] = await connection.query(`SELECT clientid, databasename FROM CredentialMaster`);
+        connection.release();
+        const clients = rows.map(row => ({
+            clientid: row.clientid,
+            databasename: row.databasename
+        }));
+        res.json(clients);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
+
+
 router.post('/addsystems', async (req, res) => {
-    const { systemid, systemname, logoid } = req.body;
+    const { systemid, systemname, logoid,logopath } = req.body;
 
     try {
         const connection = await getConnection();
         if (!systemid || !systemname || !logoid) {
             return res.status(400).json({ message: 'Invalid request' });
         }
-        const result = await connection.query(
+        const result1 = await connection.query(
             'INSERT INTO SystemMaster (systemid, systemname, logoid) VALUES (?, ?, ?)',
             [systemid, systemname, logoid]
+        );
+        connection.release();
+
+        const result = await connection.query(
+            'INSERT INTO SystemLogos (logoid,logopath) VALUES (?, ?)',
+            [logoid,logopath]
         );
         connection.release();
         res.json({ message: 'System added successfully' });
@@ -79,16 +106,21 @@ router.get('/systems', async (req, res) => {
 });
 
 router.post('/addmanufacturer', async (req, res) => {
-    const { manufacturerid, manufacturername, logoid } = req.body;
+    const { manufacturerid, manufacturername, logoid ,logopath} = req.body;
 
     try {
         const connection = await getConnection();
-        if (!manufacturerid || !manufacturername || !logoid) {
+        if (!manufacturerid || !manufacturername || !logoid ) {
             return res.status(400).json({ message: 'Invalid request' });
         }
-        const result = await connection.query(
+        const result1 = await connection.query(
             'INSERT INTO ManufacturerMaster (manufacturerid, manufacturername, logoid) VALUES (?, ?, ?)',
             [manufacturerid, manufacturername, logoid]
+        );
+        connection.release();
+         const result = await connection.query(
+            'INSERT INTO ManufacturerLogos (logoid,logopath) VALUES (?, ?)',
+            [logoid, logopath]
         );
         connection.release();
         res.json({ message: 'System added successfully' });
