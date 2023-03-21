@@ -93,7 +93,7 @@ router.post('/addusers', async (req, res) => {
             return res.status(400).json({ message: 'Invalid request' });
         }
         const result = await connection.query(
-            'INSERT INTO UserMaster (userid, username, employid, department,usertype,phonenumber, email, password,userstatus ) VALUES (?, ?, ?, ?, ?, ?, ?, ?,?)',
+            'INSERT INTO UserMaster (userid, username, employid, department,usertype,phonenumber, email, passwor,userstatus ) VALUES (?, ?, ?, ?, ?, ?, ?, ?,?)',
             [userid, username, employid, department, usertype, phonenumber, email, password, userstatus]
         );
         connection.release();
