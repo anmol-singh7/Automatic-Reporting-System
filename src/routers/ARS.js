@@ -385,4 +385,71 @@ router.post('/attributes', async (req, res) => {
     }
 });
 
+// router.get('/unique-form-types', async (req, res) => {
+//   try {
+//     const connection = await getConnection();
+//     const [rows] = await connection.query('SELECT DISTINCT formtype FROM sensorlist');
+//     connection.release();
+//     const formTypes = rows.map((row) => row.formtype);
+//     res.json(formTypes);
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ message: 'Server Error' });
+//   }
+// });
+
+router.post('/uniqueformtypes', async (req, res) => {
+    try {
+        const { databasename, tablename } = req.body;
+        const connection = await getConnection();
+        let [rows] = await connection.execute(`SELECT * FROM sensorlist`);
+        connection.release();
+        if(rows.length===0){
+            res.json({formtype:[],nextFormType:"F1"})
+        }
+        else{
+        let [rows2] = await connection.execute(`SELECT formtype FROM sensorlist WHERE databasename = ? AND tablename = ?`, [databasename, tablename]);
+        connection.release();
+        // if (rows2.length === 0) {
+        //     res.json();
+        // }
+        // else {
+            const formTypes = rows2.map((row) => row.formtype);
+            const maxFormType = Math.max(...formTypes.map(f => f.replace(/[^0-9]/g, "")));
+            const nextFormType = 'F' + (maxFormType + 1);
+            formTypes.push(nextFormType);
+            res.json({ formTypes, nextFormType });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
+
+router.post('/addsensor', async (req, res) => {
+    try {
+        const connection = await getConnection();
+        const { sensorname, databasename, tablename, formtype, head1, head2, unit, attribute }=req.body;
+
+
+        if (!sensorname||!databasename|| !tablename||!formtype||!head1||!head2||!unit||!attribute){
+            return res.status(400).json({ message: 'Invalid request' });
+        }
+        const activity="active"
+        const [result] = await connection.query(
+            "INSERT INTO sensorlist (sensorname, databasename, tablename, formtype, head1, head2, unit, attribute,activity) VALUES (?, ?, ?, ?, ?, ?, ?, ?,?)",
+            [sensorname, databasename, tablename, formtype, head1, head2, unit, attribute,activity]
+        );
+
+        connection.release();
+        res.json({ success: true });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
+
+
 module.exports = router;
