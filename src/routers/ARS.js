@@ -20,6 +20,32 @@ router.post('/addCredential', async (req, res) => {
     }
 });
 
+router.get('/clients', async (req, res) => {
+    try {
+        const connection = await getConnection();
+        const [rows] = await connection.query(`
+            SELECT 
+                clientid, 
+                clientname, 
+                COUNT(*) AS databaseNum 
+            FROM 
+                CredentialMaster 
+            GROUP BY 
+                clientid
+        `);
+        connection.release();
+        const clients = rows.map(row => ({
+            clientid: row.clientid,
+            clientname: row.clientname,
+            databaseNum: row.databaseNum
+        }));
+        res.json(clients);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
 router.post('/addsystems', async (req, res) => {
     const { systemid, systemname, logoid } = req.body;
 
