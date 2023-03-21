@@ -309,4 +309,42 @@ router.post('/description', async (req, res) => {
     }
 });
 
+router.post('/tables', async (req, res) => {
+    try {
+        // Get the client ID from the request body
+        const DB = req.body.databasename;
+        // Connect to the main database and retrieve the credentials for the specified client ID
+        const main_connection = await getConnection();
+        const [credential_rows] = await main_connection.query(
+            'SELECT * FROM CredentialMaster WHERE databasename = ?',
+            [DB]
+        );
+
+        main_connection.release();
+
+        if (credential_rows.length === 0) {
+            // If no credentials were found, return a 404 error
+            return res.status(404).json({ message: 'Credentials not found' });
+        }
+
+        // Extract the required database connection credentials from the retrieved row 
+        const { hostofdatabase, userofdatabase, passwordofdatabase, databasename, waitForConnections, connectionLimit, queueLimit } = credential_rows[0];
+
+        const db_connection = await mysql.createConnection({
+            host: hostofdatabase, user: userofdatabase, password: passwordofdatabase, database: databasename, waitForConnections, connectionLimit, queueLimit
+        });
+        const tables = await db_connection.query(`SHOW TABLES FROM ${databasename}`) ;
+        await db_connection.end();
+
+        // Return the retrieved data
+        const result = tables[0].map(obj => {
+            const key = Object.values(obj)[0];
+                return key;
+        });
+        res.json(result);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
 module.exports = router;
