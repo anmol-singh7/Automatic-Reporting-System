@@ -6,12 +6,12 @@ const { getConnection } = require('../db/connection');
 router.post('/addCredential', async (req, res) => {
     try {
         console.log("aaa")
-        const { clientid, hostofdatabase, userofdatabase, passwordofdatabase, databasename, waitForConnections, connectionLimit, queueLimit } = req.body;
+        const { clientid,clientname, hostofdatabase, userofdatabase, passwordofdatabase, databasename, waitForConnections, connectionLimit, queueLimit } = req.body;
         console.log("bbb")
         const connection = await getConnection();
         console.log("ccc")
-        const query = "INSERT INTO CredentialMaster (clientid, hostofdatabase, userofdatabase, passwordofdatabase, databasename, waitForConnections, connectionLimit, queueLimit) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-        const [result] = await connection.query(query, [clientid, hostofdatabase, userofdatabase, passwordofdatabase, databasename, waitForConnections, connectionLimit, queueLimit]);
+        const query = "INSERT INTO CredentialMaster (clientid,clientname, hostofdatabase, userofdatabase, passwordofdatabase, databasename, waitForConnections, connectionLimit, queueLimit) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        const [result] = await connection.query(query, [clientid,clientname, hostofdatabase, userofdatabase, passwordofdatabase, databasename, waitForConnections, connectionLimit, queueLimit]);
         connection.release();
         res.json({ message: "Credential added successfully!" });
     } catch (error) {
@@ -93,11 +93,23 @@ router.post('/addusers', async (req, res) => {
             return res.status(400).json({ message: 'Invalid request' });
         }
         const result = await connection.query(
-            'INSERT INTO UserMaster (userid, username, employid, department,usertype,phonenumber, email, password,userstatus ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO UserMaster (userid, username, employid, department,usertype,phonenumber, email, password,userstatus ) VALUES (?, ?, ?, ?, ?, ?, ?, ?,?)',
             [userid, username, employid, department, usertype, phonenumber, email, password, userstatus]
         );
         connection.release();
         res.json({ message: 'User added successfully' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
+router.get('/users', async (req, res) => {
+    try {
+        const connection = await getConnection();
+        const [rows] = await connection.query('SELECT * FROM UserMaster');
+        connection.release();
+        res.json(rows);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server Error' });
@@ -139,6 +151,102 @@ router.get('/roles', async (req, res) => {
         res.json(rows);
     } catch (error) {
         console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
+
+router.post('/description', async (req, res) => {
+    const {
+        userid,
+        clientid,
+        reporttype,
+        systems,
+        manufacturer,
+        datebegin,
+        timebegin,
+        dateend,
+        timeend,
+        status,
+        timetype,
+    } = req.body;
+
+    try {
+        const connection = await getConnection();
+        if (
+            !userid ||
+            !clientid ||
+            !reporttype ||
+            !systems ||
+            !manufacturer ||
+            !datebegin ||
+            !timebegin ||
+            !dateend ||
+            !timeend ||
+            !status ||
+            !timetype
+        ) {
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            return res.status(400).json({ message: 'Invalid request' });
+        }
+        // Generate the codegeneratedVianumberrep
+        const [countResult] = await connection.query(
+            'SELECT COUNT(*) AS count FROM descriptiontable WHERE datebegin = ?',
+            [datebegin]
+        );
+        const count = countResult[0].count + 1;
+        const codegeneratedVianumberrep = count.toString().padStart(6, '0');
+        // Generate the report ID
+        const newdate = datebegin.slice(0, -16);
+        const reportid = `${newdate}${codegeneratedVianumberrep}V_1`;
+
+        // Generate the codegeneratedVianumberrep
+        // const [countResult] = await connection.query(
+        //     'SELECT COUNT(*) AS count FROM descriptiontable WHERE datebegin = ?',
+        //     [datebegin]
+        // );
+        // const count = countResult[0].count + 1;
+        // const codegeneratedVianumberrep = count.toString().padStart(6, '0');
+        // Get current date
+        // const date = new Date();
+        // // Extract year, month, and day from the date
+        // const year = date.getFullYear().toString().substr(-2);
+        // const month = ('0' + (date.getMonth() + 1)).slice(-2);
+        // const day = ('0' + date.getDate()).slice(-2);
+        // // Generate a 4-digit random number
+        // const randomNumber = Math.floor(1000 + Math.random() * 9000);
+        // // Concatenate date and random number to form the ID
+        // const id = year + month + day + randomNumber.toString();
+
+        // const idstring=id.toString();
+
+        // const reportid=idstring+"V_1";
+        // Generate the report ID
+        // const reportid = id;
+
+        const result = await connection.query(
+            'INSERT INTO descriptiontable (userid, clientid, reporttype, systems, manufacturer, datebegin, timebegin, dateend, timeend, status, timetype, reportid) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [
+                userid,
+                clientid,
+                reporttype,
+                systems,
+                manufacturer,
+                datebegin,
+                timebegin,
+                dateend,
+                timeend,
+                status,
+                timetype,
+                reportid,
+            ]
+        );
+        connection.release();
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.json({ message: 'New row added successfully', reportid });
+    } catch (error) {
+        console.error(error);
+        res.setHeader('Access-Control-Allow-Origin', '*');
         res.status(500).json({ message: 'Server Error' });
     }
 });
