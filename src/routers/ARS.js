@@ -347,4 +347,42 @@ router.post('/tables', async (req, res) => {
         res.status(500).json({ message: 'Server Error' });
     }
 });
+
+router.post('/attributes', async (req, res) => {
+    try {
+        // Get the client ID from the request body
+        const DB = req.body.databasename;
+        const tablename=req.body.tablename;
+        // Connect to the main database and retrieve the credentials for the specified client ID
+        const main_connection = await getConnection();
+        const [credential_rows] = await main_connection.query(
+            'SELECT * FROM CredentialMaster WHERE databasename = ?',
+            [DB]
+        );
+
+        main_connection.release();
+
+        if (credential_rows.length === 0) {
+            // If no credentials were found, return a 404 error
+            return res.status(404).json({ message: 'Credentials not found' });
+        }
+
+        // Extract the required database connection credentials from the retrieved row 
+        const { hostofdatabase, userofdatabase, passwordofdatabase, databasename, waitForConnections, connectionLimit, queueLimit } = credential_rows[0];
+
+        const db_connection = await mysql.createConnection({
+            host: hostofdatabase, user: userofdatabase, password: passwordofdatabase, database: databasename, waitForConnections, connectionLimit, queueLimit
+        });
+        // Return the retrieved data
+        const [rows] = await db_connection.query(`DESCRIBE ${tablename}`);
+        const columns = rows.map(row => row.Field);
+        await db_connection.end();
+        res.json(columns);
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
 module.exports = router;
