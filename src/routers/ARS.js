@@ -5,12 +5,12 @@ const { getConnection } = require('../db/connection');
 
 router.post('/addCredential', async (req, res) => {
     try {
-        console.log("aaa")
         const { clientid,clientname, hostofdatabase, userofdatabase, passwordofdatabase, databasename, waitForConnections, connectionLimit, queueLimit } = req.body;
-        console.log("bbb")
+
         const connection = await getConnection();
-        console.log("ccc")
-        const query = "INSERT INTO CredentialMaster (clientid,clientname, hostofdatabase, userofdatabase, passwordofdatabase, databasename, waitForConnections, connectionLimit, queueLimit) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+
+        
+        const query = "INSERT INTO CredentialMaster (clientid,clientname, hostofdatabase, userofdatabase, passwordofdatabase, databasename, waitForConnections, connectionLimit, queueLimit) VALUES (?, ?, ?, ?, ?, ?, ?, ?,?)";
         const [result] = await connection.query(query, [clientid,clientname, hostofdatabase, userofdatabase, passwordofdatabase, databasename, waitForConnections, connectionLimit, queueLimit]);
         connection.release();
         res.json({ message: "Credential added successfully!" });
