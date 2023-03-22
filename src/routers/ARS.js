@@ -427,20 +427,75 @@ router.post('/uniqueformtypes', async (req, res) => {
 });
 
 
-router.post('/addsensor', async (req, res) => {
+// router.post('/addsensor', async (req, res) => {
+//     try {
+//         const connection = await getConnection();
+//         const { sensorname, databasename, tablename, formtype, head1, head2, unit, attribute }=req.body;
+
+
+//         if (!sensorname||!databasename|| !tablename||!formtype||!head1||!head2||!unit||!attribute){
+//             return res.status(400).json({ message: 'Invalid request' });
+//         }
+//         const activity="active"
+//         const [result] = await connection.query(
+//             "INSERT INTO sensorlist (sensorname, databasename, tablename, formtype, head1, head2, unit, attribute,activity) VALUES (?, ?, ?, ?, ?, ?, ?, ?,?)",
+//             [sensorname, databasename, tablename, formtype, head1, head2, unit, attribute,activity]
+//         );
+
+//         connection.release();
+//         res.json({ success: true });
+//     } catch (error) {
+//         console.error(error);
+//         res.status(500).json({ message: 'Server Error' });
+//     }
+// });
+
+
+router.post('/addsensors', async (req, res) => {
     try {
         const connection = await getConnection();
-        const { sensorname, databasename, tablename, formtype, head1, head2, unit, attribute }=req.body;
+        const sensorData = req.body;
 
-
-        if (!sensorname||!databasename|| !tablename||!formtype||!head1||!head2||!unit||!attribute){
+        if (!Array.isArray(sensorData) || sensorData.length === 0) {
             return res.status(400).json({ message: 'Invalid request' });
         }
-        const activity="active"
-        const [result] = await connection.query(
-            "INSERT INTO sensorlist (sensorname, databasename, tablename, formtype, head1, head2, unit, attribute,activity) VALUES (?, ?, ?, ?, ?, ?, ?, ?,?)",
-            [sensorname, databasename, tablename, formtype, head1, head2, unit, attribute,activity]
-        );
+
+        // Get the maximum sensor ID in the sensorlist table
+
+
+        // const [maxSensor] = await connection.query('SELECT MAX(sensorid) AS max_sensor FROM sensorlist');
+        // let nextSensorId = maxSensor[0].max_sensor ? maxSensor[0].max_sensor + 1 : 1;
+
+
+        // Insert each sensor row into the sensorlist table
+
+        for (const sensor of sensorData) {
+            const { databasename, tablename, formtype, head1, head2, unit, attribute } = sensor;
+
+            if (!databasename || !tablename || !formtype || !head1 || !head2 || !unit || !attribute) {
+                return res.status(400).json({ message: 'Invalid request' });
+            }
+
+            const activity = "active";
+            // const sensorname = `S${nextSensorId++}`;
+            const [aaa] = await connection.query(`SELECT * FROM sensorlist`);
+            connection.release();
+            var nextSensorname=""
+            if(aaa.length===0){
+                nextSensorname="S1"
+            }
+            const [result] = await connection.query(`SELECT MAX(sensorname) AS maxSensorname FROM sensorlist`);
+            const maxSensorname = result[0].maxSensorname;
+
+            // Generate the next sensor name
+            const nextSensorNumber = maxSensorname ? parseInt(maxSensorname.substring(1)) + 1 : 1;
+            nextSensorname = 'S' + nextSensorNumber;
+
+            await connection.query(
+                'INSERT INTO sensorlist (sensorname, databasename, tablename, formtype, head1, head2, unit, attribute, activity) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                [nextSensorname, databasename, tablename, formtype, head1, head2, unit, attribute, activity]
+            );
+        }
 
         connection.release();
         res.json({ success: true });
@@ -450,6 +505,28 @@ router.post('/addsensor', async (req, res) => {
     }
 });
 
+
+router.post('/sensors', async (req, res) => {
+    try {
+        const connection = await getConnection();
+        const {databasename, tablename, formtype } = req.body;
+
+
+        if (!databasename || !tablename || !formtype) {
+            return res.status(400).json({ message: 'Invalid request' });
+        }
+        const activity = "active"
+        const [result] = await connection.query(`SELECT head1,head2,unit,attribute FROM sensorlist WHERE databasename=? AND tablename=? AND formtype=?`,
+            [databasename, tablename, formtype]
+        );
+
+        connection.release();
+        res.json(result);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
 
 
 module.exports = router;
