@@ -20,8 +20,6 @@ router.post('/addCredential', async (req, res) => {
     }
 });
 
-
-
 router.get('/clients', async (req, res) => {
     try {
         const connection = await getConnection();
@@ -48,7 +46,6 @@ router.get('/clients', async (req, res) => {
     }
 });
 
-
 router.get('/client/databases', async (req, res) => {
     try {
         const connection = await getConnection();
@@ -64,8 +61,6 @@ router.get('/client/databases', async (req, res) => {
         res.status(500).json({ message: 'Server Error' });
     }
 });
-
-
 
 router.post('/addsystems', async (req, res) => {
     const { systemid, systemname, logoid,logopath } = req.body;
@@ -218,7 +213,7 @@ router.post('/description', async (req, res) => {
     const {
         userid,
         clientid,
-        reporttype,
+        formtype,
         systems,
         manufacturer,
         datebegin,
@@ -227,6 +222,9 @@ router.post('/description', async (req, res) => {
         timeend,
         status,
         timetype,
+        tables,
+        databasename,
+        reportid
     } = req.body;
 
     try {
@@ -234,7 +232,7 @@ router.post('/description', async (req, res) => {
         if (
             !userid ||
             !clientid ||
-            !reporttype ||
+            !formtype ||
             !systems ||
             !manufacturer ||
             !datebegin ||
@@ -242,22 +240,26 @@ router.post('/description', async (req, res) => {
             !dateend ||
             !timeend ||
             !status ||
-            !timetype
+            !timetype||
+            !tables ||
+            !databasename
         ) {
             res.setHeader('Access-Control-Allow-Origin', '*');
             return res.status(400).json({ message: 'Invalid request' });
         }
         // Generate the codegeneratedVianumberrep
         const [countResult] = await connection.query(
-            'SELECT COUNT(*) AS count FROM descriptiontable WHERE datebegin = ?',
+            'SELECT COUNT(*) AS count FROM DescriptionMaster WHERE datebegin = ?',
             [datebegin]
         );
+        var tempreportid=reportid;
+        if(reportid===null){
         const count = countResult[0].count + 1;
         const codegeneratedVianumberrep = count.toString().padStart(6, '0');
         // Generate the report ID
         const newdate = datebegin.slice(0, -16);
-        const reportid = `${newdate}${codegeneratedVianumberrep}V_1`;
-
+           tempreportid = `${newdate}${clientid}${codegeneratedVianumberrep}V_1`;
+        }
         // Generate the codegeneratedVianumberrep
         // const [countResult] = await connection.query(
         //     'SELECT COUNT(*) AS count FROM descriptiontable WHERE datebegin = ?',
@@ -283,11 +285,11 @@ router.post('/description', async (req, res) => {
         // const reportid = id;
 
         const result = await connection.query(
-            'INSERT INTO descriptiontable (userid, clientid, reporttype, systems, manufacturer, datebegin, timebegin, dateend, timeend, status, timetype, reportid) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO DescriptionMaster ( userid,clientid,formtype,systems,manufacturer,datebegin,timebegin, dateend,timeend,status, timetype, tables, databasename, reportid) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?)',
             [
                 userid,
                 clientid,
-                reporttype,
+                formtype,
                 systems,
                 manufacturer,
                 datebegin,
@@ -296,7 +298,9 @@ router.post('/description', async (req, res) => {
                 timeend,
                 status,
                 timetype,
-                reportid,
+                tables,
+                databasename,
+                tempreportid,
             ]
         );
         connection.release();

@@ -4,10 +4,6 @@ const HOST = process.env.HOST
 const DATABASE = process.env.DATABASE_NAME;
 const PASSWORD = process.env.PASSWORD;
 const USER = process.env.USER_NAME;
-console.log(process.env.HOST, typeof (HOST))
-console.log(DATABASE, typeof (DATABASE))
-console.log(PASSWORD, typeof (PASSWORD))
-console.log(USER, typeof (USER))
 const pool = mysql.createPool({
     host: HOST,
     user: USER,
