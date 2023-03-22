@@ -420,7 +420,7 @@ router.post('/uniqueformtypes', async (req, res) => {
             const maxformtype = result[0].maxformtype;
 
             // Generate the next sensor name
-            const nextformtype = maxformtype ? parseInt(maxformtype.substring(1)) + 1 : 1;
+            var nextformtype = maxformtype ? parseInt(maxformtype.substring(1)) + 1 : 1;
             nextformtype = 'F' + nextformtype;
             res.json({ formTypes, nextformtype });
         }
