@@ -465,12 +465,12 @@ router.post('/uniqueformtypes', async (req, res) => {
         let [rows] = await connection.query(`SELECT * FROM sensorlist`);
         connection.release();
         if (rows.length === 0) {
-            res.json({ formtype: [], nextFormType: "F1" })
+            res.json({ formtypes: [], nextformtype: "F1" })
         }
         else {
             let [rows2] = await connection.query(`SELECT DISTINCT formtype FROM sensorlist WHERE databasename = ? AND tablename = ?`, [databasename, tablename]);
             connection.release();
-            const formTypes = rows2.map((row) => row.formtype);
+            const formtypes = rows2.map((row) => row.formtype);
 
             const [result] = await connection.query(`SELECT MAX(formtype) AS maxformtype FROM sensorlist`);
             const maxformtype = result[0].maxformtype;
@@ -481,7 +481,7 @@ router.post('/uniqueformtypes', async (req, res) => {
             } else {
                 nextformtype = 'F1';
             }
-            res.json({ formTypes, nextformtype });
+            res.json({ formtypes, nextformtype });
         }
     } catch (error) {
         console.error(error);
