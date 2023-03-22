@@ -398,37 +398,37 @@ router.post('/attributes', async (req, res) => {
 //   }
 // });
 
-router.post('/uniqueformtypes', async (req, res) => {
-    try {
-        const { databasename, tablename } = req.body;
-        const connection = await getConnection();
-        let [rows] = await connection.query(`SELECT * FROM sensorlist`);
-        connection.release();
-        if(rows.length===0){
-            res.json({formtype:[],nextFormType:"F1"})
-        }
-        else{
-            let [rows2] = await connection.query(`SELECT DISTINCT formtype FROM sensorlist WHERE databasename = ? AND tablename = ?`, [databasename, tablename]);
-        connection.release();
-        // if (rows2.length === 0) {
-        //     res.json();
-        // }
-        // else {
-            const formTypes = rows2.map((row) => row.formtype);
+// router.post('/uniqueformtypes', async (req, res) => {
+//     try {
+//         const { databasename, tablename } = req.body;
+//         const connection = await getConnection();
+//         let [rows] = await connection.query(`SELECT * FROM sensorlist`);
+//         connection.release();
+//         if(rows.length===0){
+//             res.json({formtype:[],nextFormType:"F1"})
+//         }
+//         else{
+//             let [rows2] = await connection.query(`SELECT DISTINCT formtype FROM sensorlist WHERE databasename = ? AND tablename = ?`, [databasename, tablename]);
+//         connection.release();
+//         // if (rows2.length === 0) {
+//         //     res.json();
+//         // }
+//         // else {
+//             const formTypes = rows2.map((row) => row.formtype);
            
-            const [result] = await connection.query(`SELECT MAX(formtype) AS maxformtype FROM sensorlist`);
-            const maxformtype = result[0].maxformtype;
+//             const [result] = await connection.query(`SELECT MAX(formtype) AS maxformtype FROM sensorlist`);
+//             const maxform = result[0].maxformtype;
 
-            // Generate the next sensor name
-            var nextformtype = maxformtype ? parseInt(maxformtype.substring(1)) + 1 : 1;
-            nextformtype = 'F' + nextformtype;
-            res.json({ formTypes, nextformtype });
-        }
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server Error' });
-    }
-});
+//             // Generate the next sensor name
+//             var nextformtype = maxformtype ? parseInt(maxform.substring(1)) + 1 : 1;
+//             nextformtype = 'F' + nextformtype;
+//             res.json({ formTypes, nextformtype });
+//         }
+//     } catch (error) {
+//         console.error(error);
+//         res.status(500).json({ message: 'Server Error' });
+//     }
+// });
 
 
 // router.post('/addsensor', async (req, res) => {
@@ -453,6 +453,37 @@ router.post('/uniqueformtypes', async (req, res) => {
 //         res.status(500).json({ message: 'Server Error' });
 //     }
 // });
+
+router.post('/uniqueformtypes', async (req, res) => {
+    try {
+        const { databasename, tablename } = req.body;
+        const connection = await getConnection();
+        let [rows] = await connection.query(`SELECT * FROM sensorlist`);
+        connection.release();
+        if (rows.length === 0) {
+            res.json({ formtype: [], nextFormType: "F1" })
+        }
+        else {
+            let [rows2] = await connection.query(`SELECT DISTINCT formtype FROM sensorlist WHERE databasename = ? AND tablename = ?`, [databasename, tablename]);
+            connection.release();
+            const formTypes = rows2.map((row) => row.formtype);
+
+            const [result] = await connection.query(`SELECT MAX(formtype) AS maxformtype FROM sensorlist`);
+            const maxformtype = result[0].maxformtype;
+            let nextformtype;
+            if (maxformtype) {
+                const num = parseInt(maxformtype.substring(1)) + 1;
+                nextformtype = `F${num}`;
+            } else {
+                nextformtype = 'F1';
+            }
+            res.json({ formTypes, nextformtype });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
 
 
 router.post('/addsensors', async (req, res) => {
