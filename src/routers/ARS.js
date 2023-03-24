@@ -252,7 +252,7 @@ router.post('/description', async (req, res) => {
             !nexthandler ||
             !count
         ) {
-            res.setHeader('Access-Control-Allow-Origin', '*');
+    
             return res.status(400).json({ message: 'Invalid request' });
         }
         // Generate the codegeneratedVianumberrep
@@ -327,14 +327,37 @@ router.post('/description', async (req, res) => {
             ]
         );
         connection.release();
-        res.setHeader('Access-Control-Allow-Origin', '*');
+
         res.json({ message: 'New row added successfully', reportid: tempreportid, utilityid: tempreportid2 });
     } catch (error) {
         console.error(error);
-        res.setHeader('Access-Control-Allow-Origin', '*');
+
         res.status(500).json({ message: 'Server Error' });
     }
 });
+
+
+router.post('/description/reportid', async (req, res) => {
+    try {
+        const connection = await getConnection();
+        const { reportid  } = req.body;
+
+
+        if (!reportid) {
+            return res.status(400).json({ message: 'Invalid request' });
+        }
+        const activity = "active"
+        const [result] = await connection.query(`SELECT * FROM DescriptionMaster WHERE reportid = ?`,[reportid],
+        );
+
+        connection.release();
+        res.json(result);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
 
 router.post('/tables', async (req, res) => {
     try {
@@ -598,7 +621,6 @@ router.post('/normalpoints', async (req, res) => {
 });
 
 router.post('/advancesearch', async (req, res) => {
-
     try {
         const DB = req.body.databasename;
         // Connect to the main database and retrieve the credentials for the specified client ID
@@ -616,11 +638,8 @@ router.post('/advancesearch', async (req, res) => {
         // Extract the required database connection credentials from the retrieved row 
         const { hostofdatabase, userofdatabase, passwordofdatabase, databasename, waitForConnections, connectionLimit, queueLimit } = credential_rows[0];
 
-
-        res.setHeader('Access-Control-Allow-Origin', '*');
         const reportid = req.body.reportid;
         if (reportid === undefined) {
-
             res.json({ message: 'reportid is undefinedg' });
         }
         // Get datebegin, dateend, and reporttype from Description table
@@ -631,14 +650,16 @@ router.post('/advancesearch', async (req, res) => {
         const [{ datebegin, dateend, formtype }] = descriptionRows;
         // Get SetPointList and NormalPointList from Set_Points and Normal_Points tables
         const [setPointRows] = await main_connection.query(
-            'SELECT sensorname FROM Set_Points WHERE reportid = ? ORDER BY sensorname ASC',
+            'SELECT sensorname FROM Set_Points WHERE reportid = ? ORDER BY IF(order1 = 0, NULL, order1), sensorname ASC',
             [reportid]
         );
 
+
         const [normalPointRows] = await main_connection.query(
-            'SELECT sensorname FROM Normal_Points WHERE reportid = ? ORDER BY sensorname ASC',
+            'SELECT sensorname FROM Normal_Points WHERE reportid = ? ORDER BY IF(order1 = 0, NULL, order1), sensorname ASC',
             [reportid]
         );
+
         const setPointList = setPointRows.map(row => row.sensorname);
         const setPointListValues = setPointList.map(() => '?').join(',');
         const [setListRows] = await main_connection.query(
@@ -688,5 +709,67 @@ router.post('/advancesearch', async (req, res) => {
         res.status(500).json({ message: 'Server Error' });
     }
 });
+
+router.post('/updateSetPoints', async (req, res) => {
+    try {
+        const connection = await pool.getConnection();
+        const updates = req.body;
+
+        if (!Array.isArray(updates) || updates.length === 0) {
+            return res.status(400).json({ message: 'Invalid request' });
+        }
+
+        // Update the rows in the Set_Points table
+        for (const update of updates) {
+            const { reportid, sensorname, order1 } = update;
+
+            if (!reportid || !sensorname || isNaN(parseInt(order1))) {
+                return res.status(400).json({ message: 'Invalid request' });
+            }
+
+            const [results] = await connection.query(
+                'UPDATE Set_Points SET order1 = ? WHERE reportid = ? AND sensorname = ?',
+                [parseInt(order1), reportid, sensorname]
+            );
+        }
+
+        connection.release();
+        res.json({ success: true });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
+router.post('/updatenormalpoints', async (req, res) => {
+    try {
+        const connection = await getConnection();
+        const normalPointsData = req.body;
+
+        if (!Array.isArray(normalPointsData) || normalPointsData.length === 0) {
+            return res.status(400).json({ message: 'Invalid request' });
+        }
+
+        for (const normalPoint of normalPointsData) {
+            const { reportid, sensorname, order1 } = normalPoint;
+
+            if (!reportid || !sensorname || isNaN(parseInt(order1))) {
+                return res.status(400).json({ message: 'Invalid request' });
+            }
+
+            await connection.query(
+                'UPDATE Normal_Points SET order1 = ? WHERE reportid = ? AND sensorname = ?',
+                [parseInt(order1), reportid, sensorname]
+            );
+        }
+
+        connection.release();
+        res.json({ success: true });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
 
 module.exports = router;
