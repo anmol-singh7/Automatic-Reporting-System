@@ -212,37 +212,46 @@ router.get('/roles', async (req, res) => {
 router.post('/description', async (req, res) => {
     const {
         userid,
+        reportid,
+        utilityid,
+        version,
         clientid,
-        formtype,
         systems,
         manufacturer,
         datebegin,
         timebegin,
         dateend,
         timeend,
-        status,
         timetype,
-        tables,
-        databasename,
-        reportid
+        databasename ,
+        table1,
+        formtype,
+        status1,
+        prechandler,
+        nexthandler,
+        count
     } = req.body;
 
     try {
         const connection = await getConnection();
         if (
-            !userid ||
-            !clientid ||
-            !formtype ||
-            !systems ||
-            !manufacturer ||
-            !datebegin ||
-            !timebegin ||
-            !dateend ||
-            !timeend ||
-            !status ||
-            !timetype||
-            !tables ||
-            !databasename
+          !userid ||
+          !version ||
+          !clientid ||
+          !systems ||
+          !manufacturer ||
+          !datebegin ||
+           !timebegin ||
+           !dateend ||
+           !timeend ||
+           !timetype ||
+           !databasename ||
+           !table1 ||
+           !formtype ||
+           !status1 ||
+            !prechandler ||
+            !nexthandler ||
+            !count
         ) {
             res.setHeader('Access-Control-Allow-Origin', '*');
             return res.status(400).json({ message: 'Invalid request' });
@@ -254,11 +263,19 @@ router.post('/description', async (req, res) => {
         );
         var tempreportid=reportid;
         if(reportid===null){
-        const count = countResult[0].count + 1;
-        const codegeneratedVianumberrep = count.toString().padStart(6, '0');
+        const cou = countResult[0].count + 1;
+        const codegeneratedVianumberrep = cou.toString().padStart(6, '0');
         // Generate the report ID
         const newdate = datebegin.slice(0, -16);
-           tempreportid = `${newdate}${clientid}${codegeneratedVianumberrep}V_1`;
+           tempreportid = `${newdate}${clientid}${codegeneratedVianumberrep}`;
+        }
+        var tempreportid2=utilityid;
+        if (utilityid === null) {
+            const cou2 = countResult[0].count + 1;
+            const codegeneratedVianumberrep2 = cou2.toString().padStart(6, '0');
+            // Generate the report ID
+            const newdate = datebegin.slice(0, -16);
+            tempreportid2 = `${newdate}${clientid}${codegeneratedVianumberrep2}D_${databasename}T_${table1}F_${formtype}V_${version}_prev${prechandler}_C${count}_S${status1}`;
         }
         // Generate the codegeneratedVianumberrep
         // const [countResult] = await connection.query(
@@ -285,27 +302,32 @@ router.post('/description', async (req, res) => {
         // const reportid = id;
 
         const result = await connection.query(
-            'INSERT INTO DescriptionMaster ( userid,clientid,formtype,systems,manufacturer,datebegin,timebegin, dateend,timeend,status, timetype, tables, databasename, reportid) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?)',
+            'INSERT INTO DescriptionMaster (    userid, reportid,utilityid,version,clientid,systems,manufacturer,datebegin,timebegin,dateend,timeend,timetype,databasename,table1,formtype,status1,prechandler,nexthandler,count) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?)',
             [
                 userid,
+                tempreportid,
+                tempreportid2,
+                version,
                 clientid,
-                formtype,
                 systems,
                 manufacturer,
                 datebegin,
                 timebegin,
                 dateend,
                 timeend,
-                status,
                 timetype,
-                tables,
                 databasename,
-                tempreportid,
+                table1,
+                formtype,
+                status1,
+                prechandler,
+                nexthandler,
+                count
             ]
         );
         connection.release();
         res.setHeader('Access-Control-Allow-Origin', '*');
-        res.json({ message: 'New row added successfully', reportid });
+        res.json({ message: 'New row added successfully', reportid ,utilityid});
     } catch (error) {
         console.error(error);
         res.setHeader('Access-Control-Allow-Origin', '*');
@@ -489,6 +511,37 @@ router.post('/uniqueformtypes', async (req, res) => {
     }
 });
 
+router.post('/uniqueformtypes2', async (req, res) => {
+    try {
+        const {databasename, tablename } = req.body;
+        const connection = await getConnection();
+        let [rows] = await connection.query(`SELECT * FROM sensorlist`);
+        connection.release();
+        if (rows.length === 0) {
+            res.json({ formtypes: [], nextformtype: "F1" })
+        }
+        else {
+            let [rows2] = await connection.query(`SELECT DISTINCT formtype FROM sensorlist WHERE databasename = ? AND tablename = ?`, [databasename, tablename]);
+            connection.release();
+            const formtypes = rows2.map((row) => row.formtype);
+
+            const [result] = await connection.query(`SELECT MAX(formtype) AS maxformtype FROM sensorlist`);
+            const maxformtype = result[0].maxformtype;
+            let nextformtype;
+            if (maxformtype) {
+                const num = parseInt(maxformtype.substring(1)) + 1;
+                nextformtype = `F${num}`;
+            } else {
+                nextformtype = 'F1';
+            }
+            res.json({ formtypes, nextformtype });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
 
 router.post('/addsensors', async (req, res) => {
     try {
@@ -566,6 +619,49 @@ router.post('/sensors', async (req, res) => {
         res.status(500).json({ message: 'Server Error' });
     }
 });
+
+router.post('/setpoints', async (req, res) => {
+    const data = req.body;
+    const connection = await getConnection();
+    try {
+        for (let i = 0; i < data.length; i++) {
+            const reportid = data[i].reportid;
+            const sensorname = data[i].sensorname;
+            const order1 =data[i].order1;
+            const [rows] = await connection.query('SELECT * FROM Set_Points WHERE reportid = ? AND sensorname = ?', [reportid, sensorname]);
+            if (rows.length === 0) {
+                await connection.query('INSERT INTO Set_Points (reportid, sensorname,order1) VALUES (?, ?, ?)', [reportid, sensorname,order1]);
+            }
+        }
+        connection.release();
+        res.json({ message: 'Data inserted successfully' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
+router.post('/normalpoints', async (req, res) => {
+    const data = req.body;
+    const connection = await getConnection();
+    try {
+        for (let i = 0; i < data.length; i++) {
+            const reportid = data[i].reportid;
+            const sensorname = data[i].sensorname;
+            const order1 = data[i].order1;
+            const [rows] = await connection.query('SELECT * FROM Normal_Points WHERE reportid = ? AND sensorname = ?', [reportid, sensorname]);
+            if (rows.length === 0) {
+                await connection.query('INSERT INTO Normal_Points (reportid, sensorname, order1) VALUES (?, ?,?)', [reportid, sensorname,order1]);
+            }
+        }
+        connection.release();
+        res.json({ message: 'Data inserted successfully' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
 
 
 module.exports = router;
