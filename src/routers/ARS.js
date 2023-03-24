@@ -742,26 +742,33 @@ router.post('/advancesearch', async (req, res) => {
         );
         const normalList = normalPointList.map(sensorname => normalListRows.find(row => row.sensorname === sensorname));
         // console.log(5)
-        // console.log("Normallist", normalList)
+        console.log("Normallist", normalList)
         // Get attribute types from NormalList
         const attributes = normalList.map(row => row.attributetype);
-       
+       console.log("22")
         main_connection.release();
        
         // console.log("columns",columns)
         // Get rows from TABLE_TO_USE table where first column value is between datebegin and dateend
+        console.log("33")
         const db_connection = await mysql.createConnection({
             host: hostofdatabase, user: userofdatabase, password: passwordofdatabase, database: databasename, waitForConnections, connectionLimit, queueLimit
         });
-        const TABLE_TO_USE = req.body.table;
+        console.log("44")
+        const TABLE_TO_USE = req.body.tablename;
+        const [rows] = await db_connection.query(`DESCRIBE ${TABLE_TO_USE}`);
+        console.log(2)
+       
+        console.log(3)
+        const columns = rows.map(row => row.Field);
+       
         const [tableRows] = await db_connection.query(
             `SELECT * FROM ${TABLE_TO_USE} WHERE ${columns[0]} BETWEEN ? AND ? `,
             [datebegin, dateend]
         );
-        
-        const [rows] = await db_connection.query(`DESCRIBE ${TABLE_TO_USE}`);
-        db_connection.release();
-        const columns = rows.map(row => row.Field);
+        console.log("55")
+      
+        console.log(4)
         // const array1 = columns;
         // const array2 = tableRows[0];
         // console.log(tableRows[0]);
@@ -789,6 +796,7 @@ router.post('/advancesearch', async (req, res) => {
         
         // console.log(8)
         const response = { firstheader: setList, secondheader: normalList, body: finalArray, attributelist: tableRows[0] };
+        console.log(response)
         res.setHeader('Access-Control-Allow-Origin', '*');
         // console.log(9)
         res.json(response);
