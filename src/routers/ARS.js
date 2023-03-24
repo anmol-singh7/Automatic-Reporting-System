@@ -327,7 +327,7 @@ router.post('/description', async (req, res) => {
         );
         connection.release();
         res.setHeader('Access-Control-Allow-Origin', '*');
-        res.json({ message: 'New row added successfully', reportid ,utilityid});
+        res.json({ message: 'New row added successfully', reportid:tempreportid ,utilityid:tempreportid2});
     } catch (error) {
         console.error(error);
         res.setHeader('Access-Control-Allow-Origin', '*');
