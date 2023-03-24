@@ -668,6 +668,136 @@ router.post('/normalpoints', async (req, res) => {
     }
 });
 
+router.post('/advancesearch', async (req, res) => {
 
+    try {
+        const DB = req.body.databasename;
+        // Connect to the main database and retrieve the credentials for the specified client ID
+        const main_connection = await getConnection();
+        const [credential_rows] = await main_connection.query(
+            'SELECT * FROM CredentialMaster WHERE databasename = ?',
+            [DB]
+        );
+        if (credential_rows.length === 0) {
+            // If no credentials were found, return a 404 error
+            main_connection.release();
+            return res.status(404).json({ message: 'Credentials not found' });
+        }
+
+        // Extract the required database connection credentials from the retrieved row 
+        const { hostofdatabase, userofdatabase, passwordofdatabase, databasename, waitForConnections, connectionLimit, queueLimit } = credential_rows[0];
+
+       
+        // console.log(3)
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        const reportid = req.body.reportid;
+        if (reportid === undefined) {
+            
+            res.json({ message: 'reportid is undefinedg' });
+        }
+        // console.log(reportid)
+        
+        // Get datebegin, dateend, and reporttype from Description table
+        const [descriptionRows] = await main_connection.query(
+            'SELECT datebegin, dateend, formtype FROM DescriptionMaster WHERE reportid = ?',
+            [reportid]
+        );
+        const [{ datebegin, dateend, formtype }] = descriptionRows;
+        // Get SetPointList and NormalPointList from Set_Points and Normal_Points tables
+        const [setPointRows] = await main_connection.query(
+            'SELECT sensorname FROM Set_Points WHERE reportid = ? ORDER BY sensorname ASC',
+            [reportid]
+        );
+        // console.log("setPointRows", [setPointRows],typeof(setPointRows))
+        // const setPointList = setPointRows.map(row => row.sensorname);
+        // console.log(4)
+        const [normalPointRows] = await main_connection.query(
+            'SELECT sensorname FROM Normal_Points WHERE reportid = ? ORDER BY sensorname ASC',
+            [reportid]
+        );
+        // console.log("normalPointRows", [normalPointRows])
+        // const normalPointList = normalPointRows.map(row => row.sensorname);
+        // Get SetList and NormalList from sensorlist table
+        // const [setListRows] = await connection.query(
+        //     `SELECT * FROM sensorlist WHERE formtype = ? AND sensorname IN (${setPointList.map(() => '?').join(',')})`,
+        //     [formtype, ...setPointList]
+        // );
+        const setPointList = setPointRows.map(row => row.sensorname);
+        const setPointListValues = setPointList.map(() => '?').join(',');
+        const [setListRows] = await main_connection.query(
+            `SELECT * FROM sensorlist WHERE formtype = ? AND sensorname IN (${setPointListValues})`,
+            [formtype, ...setPointList]
+        );
+        const setList = setPointList.map(sensorname => setListRows.find(row => row.sensorname === sensorname));
+        console.log("setlist", setList);
+        // const [normalListRows] = await connection.query(
+        //     `SELECT * FROM sensorlist WHERE formtype = ? AND sensorname IN (${normalPointList.map(() => '?').join(',')})`,
+        //     [formtype, ...normalPointList]
+        // );
+        const normalPointList = normalPointRows.map(row => row.sensorname);
+        const normalPointListValues = normalPointList.map(() => '?').join(',');
+        const [normalListRows] = await main_connection.query(
+            `SELECT * FROM sensorlist WHERE formtype = ? AND sensorname IN (${normalPointListValues})`,
+            [formtype, ...normalPointList]
+        );
+        const normalList = normalPointList.map(sensorname => normalListRows.find(row => row.sensorname === sensorname));
+        // console.log(5)
+        // console.log("Normallist", normalList)
+        // Get attribute types from NormalList
+        const attributes = normalList.map(row => row.attributetype);
+       
+        main_connection.release();
+       
+        // console.log("columns",columns)
+        // Get rows from TABLE_TO_USE table where first column value is between datebegin and dateend
+        const db_connection = await mysql.createConnection({
+            host: hostofdatabase, user: userofdatabase, password: passwordofdatabase, database: databasename, waitForConnections, connectionLimit, queueLimit
+        });
+        const TABLE_TO_USE = req.body.table;
+        const [tableRows] = await db_connection.query(
+            `SELECT * FROM ${TABLE_TO_USE} WHERE ${columns[0]} BETWEEN ? AND ? `,
+            [datebegin, dateend]
+        );
+        
+        const [rows] = await db_connection.query(`DESCRIBE ${TABLE_TO_USE}`);
+        db_connection.release();
+        const columns = rows.map(row => row.Field);
+        // const array1 = columns;
+        // const array2 = tableRows[0];
+        // console.log(tableRows[0]);
+        // const result = [];
+        // for (let i = 0; i < array1.length; i++) {
+        //     const obj = {};
+        //     obj[array1[i]] = array2[i];
+        //     result.push(obj);
+        // }
+        // console.log(result);
+        // Output: [{"a":"x"}, {"b":2}, {"c":"y"}]
+        // console.log(6)
+        // Filter rows to include only attributes from Normallist
+        const finalArray = tableRows.map(row => {
+            const filteredRow = {};
+            Object.keys(row).forEach(key => {
+                if (key === `${columns[0]}` || attributes.includes(key)) {
+                    filteredRow[key] = row[key];
+                }
+            });
+            // console.log(7)
+            // res.setHeader('Access-Control-Allow-Origin', '*');
+            return filteredRow;
+        });
+        
+        // console.log(8)
+        const response = { firstheader: setList, secondheader: normalList, body: finalArray, attributelist: tableRows[0] };
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        // console.log(9)
+        res.json(response);
+        // console.log(10)
+    }
+    catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
 
 module.exports = router;
