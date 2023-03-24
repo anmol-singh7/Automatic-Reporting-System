@@ -302,7 +302,7 @@ router.post('/description', async (req, res) => {
         // const reportid = id;
 
         const result = await connection.query(
-            'INSERT INTO DescriptionMaster (    userid, reportid,utilityid,version,clientid,systems,manufacturer,datebegin,timebegin,dateend,timeend,timetype,databasename,table1,formtype,status1,prechandler,nexthandler,count) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?)',
+            'INSERT INTO DescriptionMaster (userid, reportid,utilityid,version,clientid,systems,manufacturer,datebegin,timebegin,dateend,timeend,timetype,databasename,table1,formtype,status1,prechandler,nexthandler,count) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?,?,?,?,?,?)',
             [
                 userid,
                 tempreportid,
