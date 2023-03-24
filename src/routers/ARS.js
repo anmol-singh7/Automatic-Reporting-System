@@ -608,7 +608,7 @@ router.post('/sensors', async (req, res) => {
             return res.status(400).json({ message: 'Invalid request' });
         }
         const activity = "active"
-        const [result] = await connection.query(`SELECT head1,head2,unit,attribute FROM sensorlist WHERE databasename=? AND tablename=? AND formtype=?`,
+        const [result] = await connection.query(`SELECT sensorname,head1,head2,unit,attribute FROM sensorlist WHERE databasename=? AND tablename=? AND formtype=?`,
             [databasename, tablename, formtype]
         );
 
@@ -628,6 +628,9 @@ router.post('/setpoints', async (req, res) => {
             const reportid = data[i].reportid;
             const sensorname = data[i].sensorname;
             const order1 =data[i].order1;
+            if (!data[i].reportid ||!data[i].sensorname) {
+                return res.status(400).json({ message: 'Invalid request' });
+            }
             const [rows] = await connection.query('SELECT * FROM Set_Points WHERE reportid = ? AND sensorname = ?', [reportid, sensorname]);
             if (rows.length === 0) {
                 await connection.query('INSERT INTO Set_Points (reportid, sensorname,order1) VALUES (?, ?, ?)', [reportid, sensorname,order1]);
@@ -649,6 +652,9 @@ router.post('/normalpoints', async (req, res) => {
             const reportid = data[i].reportid;
             const sensorname = data[i].sensorname;
             const order1 = data[i].order1;
+            if (!data[i].reportid || !data[i].sensorname) {
+                return res.status(400).json({ message: 'Invalid request' });
+            }
             const [rows] = await connection.query('SELECT * FROM Normal_Points WHERE reportid = ? AND sensorname = ?', [reportid, sensorname]);
             if (rows.length === 0) {
                 await connection.query('INSERT INTO Normal_Points (reportid, sensorname, order1) VALUES (?, ?,?)', [reportid, sensorname,order1]);
