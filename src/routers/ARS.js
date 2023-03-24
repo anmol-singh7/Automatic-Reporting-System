@@ -261,13 +261,15 @@ router.post('/description', async (req, res) => {
             'SELECT COUNT(*) AS count FROM DescriptionMaster WHERE datebegin = ?',
             [datebegin]
         );
+        const [couttt] = await connection.query(`SELECT COUNT(*) AS count FROM DescriptionMaster`);
+        const inc=couttt[0].count;
         var tempreportid=reportid;
         if(reportid===null){
         const cou = countResult[0].count + 1;
         const codegeneratedVianumberrep = cou.toString().padStart(6, '0');
         // Generate the report ID
         const newdate = datebegin.slice(0, -16);
-           tempreportid = `${newdate}${clientid}${codegeneratedVianumberrep}`;
+            tempreportid = `${newdate}${clientid}${codegeneratedVianumberrep}I_${inc}`;
         }
         var tempreportid2=utilityid;
         if (utilityid === null) {
