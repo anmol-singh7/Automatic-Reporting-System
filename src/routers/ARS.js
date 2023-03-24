@@ -554,15 +554,6 @@ router.post('/addsensors', async (req, res) => {
             return res.status(400).json({ message: 'Invalid request' });
         }
 
-        // Get the maximum sensor ID in the sensorlist table
-
-
-        // const [maxSensor] = await connection.query('SELECT MAX(sensorid) AS max_sensor FROM sensorlist');
-        // let nextSensorId = maxSensor[0].max_sensor ? maxSensor[0].max_sensor + 1 : 1;
-
-
-        // Insert each sensor row into the sensorlist table
-
         for (const sensor of sensorData) {
             const { databasename, tablename, formtype, head1, head2, unit, attribute } = sensor;
 
@@ -589,9 +580,10 @@ router.post('/addsensors', async (req, res) => {
                 'INSERT INTO sensorlist (sensorname, databasename, tablename, formtype, head1, head2, unit, attribute, activity) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
                 [nextSensorname, databasename, tablename, formtype, head1, head2, unit, attribute, activity]
             );
+            connection.release();
         }
 
-        connection.release();
+       
         res.json({ success: true });
     } catch (error) {
         console.error(error);
@@ -746,7 +738,8 @@ router.post('/advancesearch', async (req, res) => {
         // console.log(5)
         console.log("Normallist", normalList)
         // Get attribute types from NormalList
-        const attributes = normalList.map(row => row.attributetype);
+        const attributes = normalList.map(row => row.attribute);
+        console.log(attributes)
        console.log("22")
         main_connection.release();
        
