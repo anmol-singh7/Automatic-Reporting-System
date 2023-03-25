@@ -228,7 +228,8 @@ router.post('/description', async (req, res) => {
         status1,
         prechandler,
         nexthandler,
-        count
+        count,
+        reportname
     } = req.body;
 
     try {
@@ -250,7 +251,8 @@ router.post('/description', async (req, res) => {
             !status1 ||
             !prechandler ||
             !nexthandler ||
-            !count
+            !count||
+            !reportname
         ) {
     
             return res.status(400).json({ message: 'Invalid request' });
@@ -303,7 +305,7 @@ router.post('/description', async (req, res) => {
         // const reportid = id;
 
         const result = await connection.query(
-            'INSERT INTO DescriptionMaster (userid, reportid,utilityid,version,clientid,systems,manufacturer,datebegin,timebegin,dateend,timeend,timetype,databasename,table1,formtype,status1,prechandler,nexthandler,count) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?,?,?,?,?,?)',
+            'INSERT INTO DescriptionMaster (userid, reportid,utilityid,version,clientid,systems,manufacturer,datebegin,timebegin,dateend,timeend,timetype,databasename,table1,formtype,status1,prechandler,nexthandler,count,reportname) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?,?,?,?,?,?,?)',
             [
                 userid,
                 tempreportid,
@@ -323,7 +325,8 @@ router.post('/description', async (req, res) => {
                 status1,
                 prechandler,
                 nexthandler,
-                count
+                count,
+                reportname
             ]
         );
         connection.release();
@@ -335,7 +338,6 @@ router.post('/description', async (req, res) => {
         res.status(500).json({ message: 'Server Error' });
     }
 });
-
 
 router.post('/description/reportid', async (req, res) => {
     try {
@@ -816,8 +818,17 @@ router.post('/getsetdata/reportid', async (req, res) => {
     }
 });
 
-
-module.exports = router;
+router.get('/reports', async (req, res) => {
+    try {
+        const connection = await getConnection();
+        const [rows] = await connection.query('SELECT reportid, reportname, datebegin, status1 FROM DescriptionMaster');
+        connection.release();
+        res.json(rows);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
 
 
 module.exports = router;
