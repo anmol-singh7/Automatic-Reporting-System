@@ -359,7 +359,6 @@ router.post('/description/reportid', async (req, res) => {
     }
 });
 
-
 router.post('/tables', async (req, res) => {
     try {
         // Get the client ID from the request body
@@ -770,6 +769,33 @@ router.post('/updatenormalpoints', async (req, res) => {
         res.status(500).json({ message: 'Server Error' });
     }
 });
+
+router.post('/setPointData', async (req, res) => {
+    try {
+        const { reportid, setdata } = req.body;
+
+        // Get a database connection from the pool
+        const connection = await getConnection();
+
+        // Insert the data into the SetPointData table
+        const query = 'INSERT INTO SetPointData (reportid, setdata) VALUES (?, ?)';
+        await connection.query(query, [reportid, JSON.stringify(setdata)]);
+
+        // Update the status1 column in the DescriptionMaster table
+        const updateQuery = 'UPDATE DescriptionMaster SET status1 = ? WHERE reportid = ?';
+        await connection.query(updateQuery, ['Created', reportid]);
+
+        // Release the connection back to the pool
+        connection.release();
+
+        res.json({ message: 'Data added successfully!' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
+module.exports = router;
 
 
 module.exports = router;
