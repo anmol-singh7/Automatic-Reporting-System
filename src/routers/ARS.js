@@ -795,7 +795,7 @@ router.post('/setPointData', async (req, res) => {
     }
 });
 
-router.get('/getsetdata/reportid', async (req, res) => {
+router.post('/getsetdata/reportid', async (req, res) => {
     try {
         const reportid = req.body.reportid;
         const connection = await getConnection();
