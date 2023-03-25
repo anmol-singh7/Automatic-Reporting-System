@@ -795,6 +795,28 @@ router.post('/setPointData', async (req, res) => {
     }
 });
 
+router.get('/getsetdata/reportid', async (req, res) => {
+    try {
+        const reportid = req.body.reportid;
+        const connection = await getConnection();
+
+        const query = "SELECT setdata FROM SetPointData WHERE reportid = ?";
+        const [rows] = await connection.query(query, [reportid]);
+        connection.release();
+
+        if (rows.length === 0) {
+            res.status(404).json({ message: `No data found for reportid: ${reportid}` });
+            return;
+        }
+
+        res.json({ setdata: rows[0].setdata });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
+
 module.exports = router;
 
 
