@@ -9,14 +9,13 @@ require("./db/connection");
 console.log(process.env.PORT)
 PORT = process.env.PORT || 3000;
 
-const ARS = require("./routers/ARS");
+const AR = require("./routers/ARS");
 
 const app = express();
 app.use(cors());
 app.use(bodyParser.urlencoded({ extended: true, parameterLimit: 100000, limit: "50mb" }));
 
 app.use(express.json({ limit: '50mb' }));
-
 
 // Add middleware to set the 'Access-Control-Allow-Origin' header
 // app.use((req, res, next) => {
