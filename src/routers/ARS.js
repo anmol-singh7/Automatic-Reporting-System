@@ -437,17 +437,56 @@ router.post('/attributes', async (req, res) => {
     }
 });
 
+// router.post('/uniqueformtypes', async (req, res) => {
+//     try {
+//         const { databasename, tablename } = req.body;
+//         const connection = await getConnection();
+//         let [rows] = await connection.query(`SELECT * FROM sensorlist`);
+//         connection.release();
+//         if (rows.length === 0) {
+//             res.json({ formtypes: [], nextformtype: "F1" })
+//         }
+//         else {
+//             let [rows2] = await connection.query(`SELECT DISTINCT formtype FROM sensorlist WHERE databasename = ? AND tablename = ?`, [databasename, tablename]);
+//             connection.release();
+//             const formtypes = rows2.map((row) => row.formtype);
+
+//             const [result] = await connection.query(`SELECT MAX(formtype) AS maxformtype FROM sensorlist`);
+//             const maxformtype = result[0].maxformtype;
+//             let nextformtype;
+//             if (maxformtype) {
+//                 const num = parseInt(maxformtype.substring(1)) + 1;
+//                 nextformtype = `F${num}`;
+//             } else {
+//                 nextformtype = 'F1';
+//             }
+
+//             res.json({ formtypes, nextformtype });
+//         }
+//     } catch (error) {
+//         console.error(error);
+//         res.status(500).json({ message: 'Server Error' });
+//     }
+// });
+
 router.post('/uniqueformtypes', async (req, res) => {
     try {
-        const { databasename, tablename } = req.body;
+        const  tablename  = req.body.tablename;
+        const DB=req.body.databasename;
         const connection = await getConnection();
+
+        // Get all rows from the table
         let [rows] = await connection.query(`SELECT * FROM sensorlist`);
         connection.release();
+
         if (rows.length === 0) {
-            res.json({ formtypes: [], nextformtype: "F1" })
-        }
-        else {
-            let [rows2] = await connection.query(`SELECT DISTINCT formtype FROM sensorlist WHERE databasename = ? AND tablename = ?`, [databasename, tablename]);
+            res.json({ formtypes: [], nextformtype: "F1", minvalue: null, maxvalue: null });
+        } else {
+            // Get the distinct form types
+            let [rows2] = await connection.query(`SELECT DISTINCT formtype FROM sensorlist WHERE databasename = ? AND tablename = ?`, [DB, tablename]);
+    
+    
+            // Connect to the main database and retrieve the credentials for the specified client ID
             connection.release();
             const formtypes = rows2.map((row) => row.formtype);
 
@@ -460,44 +499,75 @@ router.post('/uniqueformtypes', async (req, res) => {
             } else {
                 nextformtype = 'F1';
             }
-            res.json({ formtypes, nextformtype });
-        }
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server Error' });
-    }
-});
 
-router.post('/uniqueformtypes2', async (req, res) => {
-    try {
-        const { databasename, tablename } = req.body;
-        const connection = await getConnection();
-        let [rows] = await connection.query(`SELECT * FROM sensorlist`);
-        connection.release();
-        if (rows.length === 0) {
-            res.json({ formtypes: [], nextformtype: "F1" })
-        }
-        else {
-            let [rows2] = await connection.query(`SELECT DISTINCT formtype FROM sensorlist WHERE databasename = ? AND tablename = ?`, [databasename, tablename]);
+            const [credential_rows] = await connection.query(
+                'SELECT * FROM CredentialMaster WHERE databasename = ?',
+                [DB]
+            );
             connection.release();
-            const formtypes = rows2.map((row) => row.formtype);
 
-            const [result] = await connection.query(`SELECT MAX(formtype) AS maxformtype FROM sensorlist`);
-            const maxformtype = result[0].maxformtype;
-            let nextformtype;
-            if (maxformtype) {
-                const num = parseInt(maxformtype.substring(1)) + 1;
-                nextformtype = `F${num}`;
-            } else {
-                nextformtype = 'F1';
+            if (credential_rows.length === 0) {
+                // If no credentials were found, return a 404 error
+                return res.status(404).json({ message: 'Credentials not found' });
             }
-            res.json({ formtypes, nextformtype });
+
+            // Extract the required database connection credentials from the retrieved row 
+            const { hostofdatabase, userofdatabase, passwordofdatabase, databasename, waitForConnections, connectionLimit, queueLimit } = credential_rows[0];
+
+            const db_connection = await mysql.createConnection({
+                host: hostofdatabase, user: userofdatabase, password: passwordofdatabase, database: databasename, waitForConnections, connectionLimit, queueLimit
+            });
+            let [rows3] = await db_connection.query(`SHOW COLUMNS FROM ${tablename}`);
+            // console.log(rows3[0].Field,typeof(rows3[0].Field))
+            const [result1] = await db_connection.query(`SELECT MAX(${rows3[0].Field}) AS max_value FROM ${tablename}`);
+            const [result2] = await db_connection.query(`SELECT MIN(${rows3[0].Field}) AS min_value FROM ${tablename}`);
+            await db_connection.end();
+
+
+            // Get the maximum and minimum value of the first column
+            const mindate = result2[0].min_value;
+            const maxdate=result1[0].max_value;
+            // console.log(minvalue,maxvalue)
+           res.json({ formtypes, nextformtype,mindate,maxdate});
         }
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server Error' });
     }
 });
+
+
+
+// router.post('/uniqueformtypes2', async (req, res) => {
+//     try {
+//         const { databasename, tablename } = req.body;
+//         const connection = await getConnection();
+//         let [rows] = await connection.query(`SELECT * FROM sensorlist`);
+//         connection.release();
+//         if (rows.length === 0) {
+//             res.json({ formtypes: [], nextformtype: "F1" })
+//         }
+//         else {
+//             let [rows2] = await connection.query(`SELECT DISTINCT formtype FROM sensorlist WHERE databasename = ? AND tablename = ?`, [databasename, tablename]);
+//             connection.release();
+//             const formtypes = rows2.map((row) => row.formtype);
+
+//             const [result] = await connection.query(`SELECT MAX(formtype) AS maxformtype FROM sensorlist`);
+//             const maxformtype = result[0].maxformtype;
+//             let nextformtype;
+//             if (maxformtype) {
+//                 const num = parseInt(maxformtype.substring(1)) + 1;
+//                 nextformtype = `F${num}`;
+//             } else {
+//                 nextformtype = 'F1';
+//             }
+//             res.json({ formtypes, nextformtype });
+//         }
+//     } catch (error) {
+//         console.error(error);
+//         res.status(500).json({ message: 'Server Error' });
+//     }
+// });
 
 router.post('/addsensors', async (req, res) => {
     try {
