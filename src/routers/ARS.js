@@ -663,12 +663,13 @@ router.post('/normalpoints', async (req, res) => {
             const reportid = data[i].reportid;
             const sensorname = data[i].sensorname;
             const order1 = data[i].order1;
+            const attribute=data[i].attribute;
             if (!data[i].reportid || !data[i].sensorname) {
                 return res.status(400).json({ message: 'Invalid request' });
             }
             const [rows] = await connection.query('SELECT * FROM Normal_Points WHERE reportid = ? AND sensorname = ?', [reportid, sensorname]);
             if (rows.length === 0) {
-                await connection.query('INSERT INTO Normal_Points (reportid, sensorname, order1) VALUES (?, ?,?)', [reportid, sensorname, order1]);
+                await connection.query('INSERT INTO Normal_Points (reportid, sensorname, order1,attribute) VALUES (?, ?,?)', [reportid, sensorname, order1,attribute]);
             }
         }
         connection.release();
