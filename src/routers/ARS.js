@@ -474,22 +474,17 @@ router.post('/uniqueformtypes', async (req, res) => {
         const  tablename  = req.body.tablename;
         const DB=req.body.databasename;
         const connection = await getConnection();
-
         // Get all rows from the table
         let [rows] = await connection.query(`SELECT * FROM sensorlist`);
         connection.release();
-
         if (rows.length === 0) {
             res.json({ formtypes: [], nextformtype: "F1", minvalue: null, maxvalue: null });
         } else {
             // Get the distinct form types
-            let [rows2] = await connection.query(`SELECT DISTINCT formtype FROM sensorlist WHERE databasename = ? AND tablename = ?`, [DB, tablename]);
-    
-    
+            let [rows2] = await connection.query(`SELECT DISTINCT formtype FROM sensorlist WHERE databasename = ? AND tablename = ?`, [DB, tablename]);    
             // Connect to the main database and retrieve the credentials for the specified client ID
             connection.release();
             const formtypes = rows2.map((row) => row.formtype);
-
             const [result] = await connection.query(`SELECT MAX(formtype) AS maxformtype FROM sensorlist`);
             const maxformtype = result[0].maxformtype;
             let nextformtype;
@@ -499,7 +494,6 @@ router.post('/uniqueformtypes', async (req, res) => {
             } else {
                 nextformtype = 'F1';
             }
-
             const [credential_rows] = await connection.query(
                 'SELECT * FROM CredentialMaster WHERE databasename = ?',
                 [DB]
@@ -508,12 +502,10 @@ router.post('/uniqueformtypes', async (req, res) => {
 
             if (credential_rows.length === 0) {
                 // If no credentials were found, return a 404 error
-                return res.status(404).json({ message: 'Credentials not found' });
+                return res.json({formtypes,nextformtype,mindate:"1999-01-01 00:00:00.000000",maxdate:"2050-01-01 00:00:00.000000"});
             }
-
             // Extract the required database connection credentials from the retrieved row 
             const { hostofdatabase, userofdatabase, passwordofdatabase, databasename, waitForConnections, connectionLimit, queueLimit } = credential_rows[0];
-
             const db_connection = await mysql.createConnection({
                 host: hostofdatabase, user: userofdatabase, password: passwordofdatabase, database: databasename, waitForConnections, connectionLimit, queueLimit
             });
@@ -522,8 +514,6 @@ router.post('/uniqueformtypes', async (req, res) => {
             const [result1] = await db_connection.query(`SELECT MAX(${rows3[0].Field}) AS max_value FROM ${tablename}`);
             const [result2] = await db_connection.query(`SELECT MIN(${rows3[0].Field}) AS min_value FROM ${tablename}`);
             await db_connection.end();
-
-
             // Get the maximum and minimum value of the first column
             const mindate = result2[0].min_value;
             const maxdate=result1[0].max_value;
@@ -535,8 +525,6 @@ router.post('/uniqueformtypes', async (req, res) => {
         res.status(500).json({ message: 'Server Error' });
     }
 });
-
-
 
 // router.post('/uniqueformtypes2', async (req, res) => {
 //     try {
@@ -608,8 +596,8 @@ router.post('/addsensors', async (req, res) => {
             }
 
             await connection.query(
-                'INSERT INTO sensorlist (sensorname, databasename, tablename, formtype, head1, head2, unit, attribute, activity) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                [nextSensorname, databasename, tablename, formtype, head1, head2, unit, attribute, "active"]
+                'INSERT INTO sensorlist (sensorname, databasename, tablename, formtype, head1, head2, unit, attribute, activity,inuse) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,?)',
+                [nextSensorname, databasename, tablename, formtype, head1, head2, unit, attribute, "active","N"]
             );
         }
 
@@ -631,7 +619,7 @@ router.post('/sensors', async (req, res) => {
             return res.status(400).json({ message: 'Invalid request' });
         }
         const activity = "active"
-        const [result] = await connection.query(`SELECT sensorname,head1,head2,unit,attribute FROM sensorlist WHERE databasename=? AND tablename=? AND formtype=?`,
+        const [result] = await connection.query(`SELECT sensorname,head1,head2,unit,attribute,activity,inuse FROM sensorlist WHERE databasename=? AND tablename=? AND formtype=?`,
             [databasename, tablename, formtype]
         );
 
@@ -727,7 +715,7 @@ router.post('/advancesearch', async (req, res) => {
 
 
         const [normalPointRows] = await main_connection.query(
-            'SELECT sensorname FROM Normal_Points WHERE reportid = ? ORDER BY IF(order1 = 0, NULL, order1), sensorname ASC',
+            'SELECT sensorname,attribute FROM Normal_Points WHERE reportid = ? ORDER BY IF(order1 = 0, NULL, order1), sensorname ASC',
             [reportid]
         );
 
@@ -746,7 +734,7 @@ router.post('/advancesearch', async (req, res) => {
         );
         const normalList = normalPointList.map(sensorname => normalListRows.find(row => row.sensorname === sensorname));
         // Get attribute types from NormalList
-        const attributes = normalList.map(row => row.attribute);
+        const attributes = normalPointRows.map(row => row.attribute);;
         main_connection.release();
 
         const db_connection = await mysql.createConnection({
@@ -899,6 +887,101 @@ router.get('/reports', async (req, res) => {
         res.status(500).json({ message: 'Server Error' });
     }
 });
+
+router.post('/sensors/inuse', async (req, res) => {
+    try {
+        const { sensornames } = req.body;
+        const connection = await getConnection();
+        const query = `SELECT * FROM sensorlist WHERE sensorname IN (?)`;
+        const [rows] = await connection.query(query, [sensornames]);
+        if (rows.length === 0) {
+            res.status(404).json({ message: 'No sensors found' });
+        } else {
+            const updateQuery = `UPDATE sensorlist SET inuse = 'Y' WHERE sensorname IN (?)`;
+            await connection.query(updateQuery, [sensornames]);
+            res.json({ message: `Inuse status updated for sensors: ${sensornames}` });
+        }
+        connection.release();
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
+router.post('/removesensors', async (req, res) => {
+    try {
+        const connection = await getConnection();
+        const sensorNames = req.body;
+        console.log(sensorNames)
+
+        if (!Array.isArray(sensorNames) || sensorNames.length === 0) {
+            return res.status(400).json({ message: 'Invalid request' });
+        }
+
+        const [results] = await connection.query(`SELECT * FROM sensorlist WHERE sensorname IN (?)`, [sensorNames]);
+
+        if (results.length === 0) {
+            return res.status(404).json({ message: 'No matching sensors found' });
+        }
+
+        for (const sensor of results) {
+            const { sensorname, inuse } = sensor;
+
+            if (inuse === 'N') {
+                // Delete the row from the table
+                await connection.query(`DELETE FROM sensorlist WHERE sensorname = ?`, [sensorname]);
+            } else if (inuse === 'Y') {
+                // Update the activity column to 'inactive'
+                await connection.query(`UPDATE sensorlist SET activity = 'inactive' WHERE sensorname = ?`, [sensorname]);
+            }
+        }
+
+        connection.release();
+        res.json({ success: true });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
+router.post('/addAttributes', async (req, res) => {
+    const attributes = req.body;
+
+    try {
+        const connection = await getConnection();
+
+        // Loop through the array of attributes
+        for (let i = 0; i < attributes.length; i++) {
+            const { reportid, sensorname, attributename } = attributes[i];
+
+            // Check if the attribute already exists
+            const [existingAttribute] = await connection.query(
+                'SELECT * FROM AttributeMaster WHERE reportid = ? AND sensorname = ? AND attributename = ?',
+                [reportid, sensorname, attributename]
+            );
+
+            if (existingAttribute.length > 0) {
+                console.log(`Skipping attribute: ${JSON.stringify(attributes[i])}`);
+                continue; // Skip to the next iteration of the loop
+            }
+
+            // Insert the attribute if it doesn't already exist
+            const result = await connection.query(
+                'INSERT INTO AttributeMaster (reportid, sensorname, attributename) VALUES (?, ?, ?)',
+                [reportid, sensorname, attributename]
+            );
+
+            console.log(`Inserted attribute: ${JSON.stringify(attributes[i])}`);
+        }
+
+        connection.release();
+        res.json({ message: 'Attributes added successfully' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
 
 
 module.exports = router;
