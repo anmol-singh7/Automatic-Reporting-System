@@ -349,8 +349,7 @@ router.post('/description/reportid', async (req, res) => {
             return res.status(400).json({ message: 'Invalid request' });
         }
         const activity = "active"
-        const [result] = await connection.query(`SELECT clientid,systems,manufacturer,datebegin,timebegin,dateend,timeend FROM DescriptionMaster WHERE reportid = ?`,[reportid],
-        );
+        const [result] = await connection.query(`SELECT clientid,systems,manufacturer,datebegin,timebegin,dateend,timeend,databasename,table1,formtype,status1,prechandler,nexthandler,count,reportname FROM DescriptionMaster WHERE reportid = ?`,[reportid]);
         const clientid=result[0].clientid;
         const [result2]=await connection.query(`SELECT clientname FROM CredentialMaster WHERE clientid=?`,[clientid])
         connection.release();
@@ -982,6 +981,9 @@ router.post('/addAttributes', async (req, res) => {
         res.status(500).json({ message: 'Server Error' });
     }
 });
+
+
+
 
 
 
