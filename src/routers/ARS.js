@@ -669,7 +669,7 @@ router.post('/normalpoints', async (req, res) => {
             }
             const [rows] = await connection.query('SELECT * FROM Normal_Points WHERE reportid = ? AND sensorname = ?', [reportid, sensorname]);
             if (rows.length === 0) {
-                await connection.query('INSERT INTO Normal_Points (reportid, sensorname, order1,attribute) VALUES (?, ?,?)', [reportid, sensorname, order1,attribute]);
+                await connection.query('INSERT INTO Normal_Points (reportid, sensorname, order1,attribute) VALUES (?, ?,?, ?)', [reportid, sensorname, order1,attribute]);
             }
         }
         connection.release();
