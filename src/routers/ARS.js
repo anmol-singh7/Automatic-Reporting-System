@@ -722,22 +722,28 @@ router.post('/advancesearch', async (req, res) => {
             'SELECT sensorname,attribute FROM Normal_Points WHERE reportid = ? ORDER BY IF(order1 = 0, NULL, order1), sensorname ASC',
             [reportid]
         );
-
+        var setList=[]
         const setPointList = setPointRows.map(row => row.sensorname);
+        if(setPointList.length>0){
         const setPointListValues = setPointList.map(() => '?').join(',');
         const [setListRows] = await main_connection.query(
             `SELECT * FROM sensorlist WHERE formtype = ? AND sensorname IN (${setPointListValues})`,
             [formtype, ...setPointList]
         );
-        const setList = setPointList.map(sensorname => setListRows.find(row => row.sensorname === sensorname));
+         setList = setPointList.map(sensorname => setListRows.find(row => row.sensorname === sensorname));
+        }   
+
         const normalPointList = normalPointRows.map(row => row.sensorname);
+        var normalList=[]
+        if(normalPointList.length>0){
         const normalPointListValues = normalPointList.map(() => '?').join(',');
         const [normalListRows] = await main_connection.query(
             `SELECT * FROM sensorlist WHERE formtype = ? AND sensorname IN (${normalPointListValues})`,
             [formtype, ...normalPointList]
         );
-        const normalList = normalPointList.map(sensorname => normalListRows.find(row => row.sensorname === sensorname));
+         normalList = normalPointList.map(sensorname => normalListRows.find(row => row.sensorname === sensorname));
         // Get attribute types from NormalList
+        }
         const attributes = normalPointRows.map(row => row.attribute);;
         main_connection.release();
 
@@ -763,8 +769,12 @@ router.post('/advancesearch', async (req, res) => {
 
             return filteredRow;
         });
+        var attributelist=[];
+        if(tableRows.length>0){
+            attributelist=tableRows[0];
+        }
 
-        const response = { firstheader: setList, secondheader: normalList, body: finalArray, attributelist: tableRows[0] };
+        const response = { firstheader: setList, secondheader: normalList, body: finalArray, attributelist };
         res.json(response);
     }
     catch (error) {
@@ -867,10 +877,9 @@ router.post('/getsetdata/reportid', async (req, res) => {
         const query = "SELECT setdata FROM SetPointData WHERE reportid = ?";
         const [rows] = await connection.query(query, [reportid]);
         connection.release();
-
         if (rows.length === 0) {
-            res.status(404).json({ message: `No data found for reportid: ${reportid}` });
-            return;
+            res.json({setdata:[[]]});
+             return;
         }
 
         res.json({ setdata: rows[0].setdata });
