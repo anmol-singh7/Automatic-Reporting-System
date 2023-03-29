@@ -352,8 +352,12 @@ router.post('/description/reportid', async (req, res) => {
         const [result] = await connection.query(`SELECT clientid,systems,manufacturer,datebegin,timebegin,dateend,timeend,databasename,table1,formtype,status1,prechandler,nexthandler,count,reportname FROM DescriptionMaster WHERE reportid = ?`,[reportid]);
         const clientid=result[0].clientid;
         const [result2]=await connection.query(`SELECT clientname FROM CredentialMaster WHERE clientid=?`,[clientid])
+        const [rows] = await connection.query(`SELECT reportid FROM DescriptionMaster WHERE reportid = ?`, [reportid]);
+         console.log(rows)
+        const  nextversion= rows.length;
+
         connection.release();
-        res.json({result,clientname:result2[0].clientname});
+        res.json({result,clientname:result2[0].clientname,nextversion});
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server Error' });
