@@ -986,8 +986,49 @@ router.post('/addAttributes', async (req, res) => {
     }
 });
 
+router.post('/historylog', async (req, res) => {
+  const { reportid, version, log } = req.body;
 
+  try {
+    // Get a connection from the pool
+    const connection = await getConnection();
 
+    // Get the current date and time
+   const dateObj = new Date();
+    const ISTOffset = 330;   // IST is UTC+5:30
+    const ISTTime = new Date(dateObj.getTime() + (ISTOffset * 60000));
+    const dateandtimestamp = ISTTime.toISOString().slice(0, 19).replace('T', ' ');
+
+    console.log(dateandtimestamp)
+    // Insert a new row into the historylog table
+    const query = 'INSERT INTO historylog (reportid, version, dateandtimestamp, log) VALUES (?, ?, ?, ?)';
+    await connection.query(query, [reportid, version, dateandtimestamp, log]);
+    
+    // Release the connection back to the pool
+    connection.release();
+
+    res.status(200).json({message:"log added succesfully"});
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Internal Server Error');
+  }
+});
+
+router.post('/getReportLogs', async (req, res) => {
+  try {
+    const { reportid } = req.body;
+
+    const connection = await getConnection();
+    const query = 'SELECT version,dateandtimestamp, log FROM historylog WHERE reportid = ?';
+    const rows = await connection.query(query, [reportid]);
+
+    connection.release();
+    res.json(rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server Error' });
+  }
+});
 
 
 
