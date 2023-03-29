@@ -892,7 +892,7 @@ router.post('/getsetdata/reportid', async (req, res) => {
 router.get('/reports', async (req, res) => {
     try {
         const connection = await getConnection();
-        const [rows] = await connection.query('SELECT reportid, reportname, datebegin,databasename,table1, status1 FROM DescriptionMaster');
+        const [rows] = await connection.query('SELECT reportid,version, reportname, datebegin,databasename,table1, status1 FROM DescriptionMaster');
         connection.release();
         res.json(rows);
     } catch (error) {
