@@ -23,16 +23,7 @@ router.post('/addCredential', async (req, res) => {
 router.get('/clients', async (req, res) => {
     try {
         const connection = await getConnection();
-        const [rows] = await connection.query(`
-            SELECT 
-                clientid, 
-                clientname, 
-                COUNT(*) AS databaseNum 
-            FROM 
-                CredentialMaster 
-            GROUP BY 
-                clientid
-        `);
+        const [rows] = await connection.query(`SELECT clientid, clientname, COUNT(*) AS databaseNum FROM CredentialMaster GROUP BY clientid    `);
         connection.release();
         const clients = rows.map(row => ({
             clientid: row.clientid,
@@ -1039,6 +1030,87 @@ router.post('/getReportLogs', async (req, res) => {
   }
 });
 
+router.patch('/deleteclient', async (req, res) => {
+  try {
+    const { clientid } = req.body;
 
+    const connection = await getConnection();
+
+    const query = "UPDATE CredentialMaster SET status = 'inactive' WHERE clientid = ?";
+    const [result] = await connection.query(query, [clientid]);
+    connection.release();
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: `Credential with clientid ${clientid} not found` });
+    }
+
+    res.json({ message: `Credential with clientid ${clientid} updated to status inactive` });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server Error' });
+  }
+});
+router.patch('/deletemanufacturer', async (req, res) => {
+  try {
+    const { manufacturerid } = req.body;
+
+    const connection = await getConnection();
+
+    const query = "UPDATE ManufacturerMaster SET status = 'inactive' WHERE manufacturerid = ?";
+    const [result] = await connection.query(query, [manufacturerid]);
+    connection.release();
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: `Manufacturer with manufacturerid ${manufacturerid} not found` });
+    }
+
+    res.json({ message: `Manufacturer with manufacturerid ${manufacturerid} updated to status inactive` });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server Error' });
+  }
+});
+
+router.patch('/deletesystem', async (req, res) => {
+  try {
+    const { systemid } = req.body;
+
+    const connection = await getConnection();
+
+    const query = "UPDATE SystemMaster SET status = 'inactive' WHERE systemid = ?";
+    const [result] = await connection.query(query, [systemid]);
+    connection.release();
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: `System with systemid ${systemid} not found` });
+    }
+
+    res.json({ message: `System with systemid ${systemid} updated to status inactive` });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server Error' });
+  }
+});
+
+router.patch('/deleteuser', async (req, res) => {
+  try {
+    const { userid } = req.body;
+
+    const connection = await getConnection();
+
+    const query = "UPDATE UserMaster SET userstatus = 'inactive' WHERE userid = ?";
+    const [result] = await connection.query(query, [userid]);
+    connection.release();
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: `User with userid ${userid} not found` });
+    }
+
+    res.json({ message: `User with userid ${userid} updated to status inactive` });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server Error' });
+  }
+});
 
 module.exports = router;
