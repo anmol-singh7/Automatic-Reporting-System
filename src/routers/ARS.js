@@ -82,7 +82,7 @@ router.post('/addsystems', async (req, res) => {
 router.get('/systems', async (req, res) => {
     try {
         const connection = await getConnection();
-        const [rows] = await connection.query('SELECT * FROM SystemMaster');
+        const [rows] = await connection.query('SELECT * FROM SystemMaster WHERE status="active" ');
         connection.release();
         res.json(rows);
     } catch (error) {
@@ -119,7 +119,7 @@ router.post('/addmanufacturer', async (req, res) => {
 router.get('/manufacturers', async (req, res) => {
     try {
         const connection = await getConnection();
-        const [rows] = await connection.query('SELECT * FROM ManufacturerMaster');
+        const [rows] = await connection.query('SELECT * FROM ManufacturerMaster WHERE status="active" ');
         connection.release();
         res.json(rows);
     } catch (error) {
@@ -151,7 +151,7 @@ router.post('/addusers', async (req, res) => {
 router.get('/users', async (req, res) => {
     try {
         const connection = await getConnection();
-        const [rows] = await connection.query('SELECT * FROM UserMaster');
+        const [rows] = await connection.query('SELECT * FROM UserMaster WHERE userstatus="active"');
         connection.release();
         res.json(rows);
     } catch (error) {
@@ -1050,6 +1050,7 @@ router.patch('/deleteclient', async (req, res) => {
     res.status(500).json({ message: 'Server Error' });
   }
 });
+
 router.patch('/deletemanufacturer', async (req, res) => {
   try {
     const { manufacturerid } = req.body;
