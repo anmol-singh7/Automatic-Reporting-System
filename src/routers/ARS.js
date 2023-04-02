@@ -129,16 +129,16 @@ router.get('/manufacturers', async (req, res) => {
 });
 
 router.post('/addusers', async (req, res) => {
-    const { userid, username, employid, department, usertype, phonenumber, email, password, userstatus } = req.body;
+    const {username, employid, department, usertype, phonenumber, email, password, userstatus } = req.body;
 
     try {
         const connection = await getConnection();
-        if (!userid || !username || !employid || !department || !usertype || !phonenumber || !email || !password || !userstatus) {
+        if (!username || !employid || !usertype|| !email || !password || !userstatus) {
             return res.status(400).json({ message: 'Invalid request' });
         }
         const result = await connection.query(
-            'INSERT INTO UserMaster (userid, username, employid, department,usertype,phonenumber, email, passwor,userstatus ) VALUES (?, ?, ?, ?, ?, ?, ?, ?,?)',
-            [userid, username, employid, department, usertype, phonenumber, email, password, userstatus]
+            'INSERT INTO UserMaster ( username, employid, department,usertype,phonenumber, email, passwor,userstatus ) VALUES (?, ?, ?, ?, ?, ?, ?,?)',
+            [username, employid, department, usertype, phonenumber, email, password, userstatus]
         );
         connection.release();
         res.json({ message: 'User added successfully' });
@@ -1107,7 +1107,7 @@ router.patch('/deleteuser', async (req, res) => {
       return res.status(404).json({ message: `User with userid ${userid} not found` });
     }
 
-    res.json({ message: `User with userid ${userid} updated to status inactive` });
+    res.status(200).json({ message: `User with userid ${userid} updated to status inactive` });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server Error' });
