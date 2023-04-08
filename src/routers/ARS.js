@@ -201,51 +201,13 @@ router.get('/roles', async (req, res) => {
 
 router.post('/description', async (req, res) => {
     const {
-        userid,
-        reportid,
-        utilityid,
-        version,
-        clientid,
-        systems,
-        manufacturer,
-        datebegin,
-        timebegin,
-        dateend,
-        timeend,
-        timetype,
-        databasename,
-        table1,
-        formtype,
-        status1,
-        prechandler,
-        nexthandler,
-        count,
-        reportname
-    } = req.body;
+        userid,reportid,utilityid,version,clientid,systems,manufacturer,datebegin,timebegin,dateend,timeend,timetype,databasename,table1,formtype,status1,prechandler,nexthandler,count,reportname} = req.body;
 
     try {
         const connection = await getConnection();
         if (
-            !userid ||
-            !version ||
-            !clientid ||
-            !systems ||
-            !manufacturer ||
-            !datebegin ||
-            !timebegin ||
-            !dateend ||
-            !timeend ||
-            !timetype ||
-            !databasename ||
-            !table1 ||
-            !formtype ||
-            !status1 ||
-            !prechandler ||
-            !nexthandler ||
-            !count||
-            !reportname
-        ) {
-    
+            !userid ||!version ||!clientid ||!systems ||!manufacturer ||!datebegin ||!timebegin ||!dateend ||!timeend ||!timetype ||!databasename ||!table1 ||!formtype ||!status1 ||!prechandler ||!nexthandler ||!count||!reportname) 
+            {
             return res.status(400).json({ message: 'Invalid request' });
         }
         // Generate the codegeneratedVianumberrep
@@ -556,7 +518,7 @@ router.post('/addsensors', async (req, res) => {
         const connection = await getConnection();
         const sensorData = req.body;
 
-        if (!Array.isArray(sensorData) || sensorData.length === 0) {
+        if (!Array.isArray(sensorData) ||ength === 0) {
             return res.status(400).json({ message: 'Invalid request' });
         }
 
@@ -713,28 +675,42 @@ router.post('/advancesearch', async (req, res) => {
             'SELECT sensorname,attribute FROM Normal_Points WHERE reportid = ? ORDER BY IF(order1 = 0, NULL, order1), sensorname ASC',
             [reportid]
         );
+        console.log("hiiiiiiiiiiiiiii", normalPointRows)
         var setList=[]
         const setPointList = setPointRows.map(row => row.sensorname);
         if(setPointList.length>0){
         const setPointListValues = setPointList.map(() => '?').join(',');
         const [setListRows] = await main_connection.query(
-            `SELECT * FROM sensorlist WHERE formtype = ? AND sensorname IN (${setPointListValues})`,
+            `SELECT sensorname,head1,head2,unit,inuse,activity,attribute FROM sensorlist WHERE formtype = ? AND sensorname IN (${setPointListValues})`,
             [formtype, ...setPointList]
         );
          setList = setPointList.map(sensorname => setListRows.find(row => row.sensorname === sensorname));
         }   
 
         const normalPointList = normalPointRows.map(row => row.sensorname);
-        var normalList=[]
+        var normalList1=[]
+        var normalList = [];
         if(normalPointList.length>0){
         const normalPointListValues = normalPointList.map(() => '?').join(',');
         const [normalListRows] = await main_connection.query(
-            `SELECT * FROM sensorlist WHERE formtype = ? AND sensorname IN (${normalPointListValues})`,
+            `SELECT sensorname,head1,head2,unit,inuse,activity,attribute FROM sensorlist WHERE formtype = ? AND sensorname IN (${normalPointListValues})`,
             [formtype, ...normalPointList]
         );
-         normalList = normalPointList.map(sensorname => normalListRows.find(row => row.sensorname === sensorname));
+        // console.log("kkkkkkkk",normalPointList)
+         normalList1 = normalPointList.map(sensorname => normalListRows.find(row => row.sensorname === sensorname));
         // Get attribute types from NormalList
+        // console.log("ooooooooooo",normalList1);
+            
+            for (const obj1 of normalList1) {
+                for (const obj2 of normalPointRows) {
+                    if (obj1.sensorname === obj2.sensorname) {
+                        obj1.attribute = obj2.attribute;
+                    }
+                }
+                normalList.push(obj1);
+            }
         }
+        // console.log("wwwwwwwwwwwwwww",normalList)
         const attributes = normalPointRows.map(row => row.attribute);;
         main_connection.release();
 
