@@ -687,9 +687,22 @@ router.post('/normalpoints', async (req, res) => {
 
 router.post('/advancesearch', async (req, res) => {
     try {
-        const DB = req.body.databasename;
+        // const DB = req.body.databasename;
         // Connect to the main database and retrieve the credentials for the specified client ID
         const main_connection = await getConnection();
+        const reportid = req.body.reportid;
+        if (reportid === undefined) {
+            res.json({ message: 'reportid is undefined' });
+        }
+        // Get datebegin, dateend, and reporttype from Description table
+        const [descriptionRows] = await main_connection.query(
+            'SELECT databasename,table1,datebegin, dateend, formtype FROM DescriptionMaster WHERE reportid = ?',
+            [reportid]
+        );
+        main_connection.release();
+        const [{ table1,datebegin, dateend, formtype }] = descriptionRows;
+
+        const DB=descriptionRows.databasename;
         const [credential_rows] = await main_connection.query(
             'SELECT * FROM CredentialMaster WHERE databasename = ?',
             [DB]
@@ -703,27 +716,20 @@ router.post('/advancesearch', async (req, res) => {
         // Extract the required database connection credentials from the retrieved row 
         const { hostofdatabase, userofdatabase, passwordofdatabase, databasename, waitForConnections, connectionLimit, queueLimit } = credential_rows[0];
 
-        const reportid = req.body.reportid;
-        if (reportid === undefined) {
-            res.json({ message: 'reportid is undefinedg' });
-        }
-        // Get datebegin, dateend, and reporttype from Description table
-        const [descriptionRows] = await main_connection.query(
-            'SELECT datebegin, dateend, formtype FROM DescriptionMaster WHERE reportid = ?',
-            [reportid]
-        );
-        const [{ datebegin, dateend, formtype }] = descriptionRows;
+        
         // Get SetPointList and NormalPointList from Set_Points and Normal_Points tables
         const [setPointRows] = await main_connection.query(
             'SELECT sensorname FROM Set_Points WHERE reportid = ? ORDER BY IF(order1 = 0, NULL, order1), sensorname ASC',
             [reportid]
         );
+        main_connection.release();
 
 
         const [normalPointRows] = await main_connection.query(
             'SELECT sensorname,attribute FROM Normal_Points WHERE reportid = ? ORDER BY IF(order1 = 0, NULL, order1), sensorname ASC',
             [reportid]
         );
+        main_connection.release();
         // console.log("hiiiiiiiiiiiiiii", normalPointRows)
         var setList = []
         const setPointList = setPointRows.map(row => row.sensorname);
@@ -733,6 +739,7 @@ router.post('/advancesearch', async (req, res) => {
                 `SELECT sensorname,head1,head2,unit,inuse,activity,attribute FROM sensorlist WHERE formtype = ? AND sensorname IN (${setPointListValues})`,
                 [formtype, ...setPointList]
             );
+            main_connection.release();
             setList = setPointList.map(sensorname => setListRows.find(row => row.sensorname === sensorname));
         }
 
@@ -745,6 +752,7 @@ router.post('/advancesearch', async (req, res) => {
                 `SELECT sensorname,head1,head2,unit,inuse,activity,attribute FROM sensorlist WHERE formtype = ? AND sensorname IN (${normalPointListValues})`,
                 [formtype, ...normalPointList]
             );
+            main_connection.release();
             // console.log("kkkkkkkk",normalPointList)
             normalList1 = normalPointList.map(sensorname => normalListRows.find(row => row.sensorname === sensorname));
             // Get attribute types from NormalList
@@ -776,7 +784,7 @@ router.post('/advancesearch', async (req, res) => {
         };
         const pool = await sql.connect(config);
 
-        const TABLE_TO_USE = req.body.tablename;
+        const TABLE_TO_USE = table1;
         // const [rows] = await db_connection.query(`DESCRIBE ${TABLE_TO_USE}`);
         const columns = await pool.request()
             .query(`SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '${TABLE_TO_USE}'`);
