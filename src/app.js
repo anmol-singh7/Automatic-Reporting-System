@@ -10,6 +10,7 @@ console.log(process.env.PORT)
 PORT = process.env.PORT || 3000;
 
 const ARS = require("./routers/ARS");
+const ARS3=require("./routers/ARS3");
 
 const app = express();
 app.use(cors());
@@ -23,7 +24,7 @@ app.use(express.json({ limit: '50mb' }));
 //     next();
 // });
 
-app.use('/api',ARS);
+app.use('/api',ARS3);
 
 app.listen(PORT, () => {
     console.log(`connection is setup at ${PORT}`);
