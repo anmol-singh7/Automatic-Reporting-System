@@ -567,7 +567,7 @@ router.post('/addsensors', async (req, res) => {
         const connection = await getConnection();
         const sensorData = req.body;
 
-        if (!Array.isArray(sensorData) || ength === 0) {
+        if (!Array.isArray(sensorData)) {
             return res.status(400).json({ message: 'Invalid request' });
         }
 
