@@ -360,7 +360,6 @@ router.post('/tables', async (req, res) => {
     }
 });
 
-
 router.post('/attributes', async (req, res) => {
     try {
         // Get the client ID and table name from the request body
@@ -701,8 +700,9 @@ router.post('/advancesearch', async (req, res) => {
         );
         main_connection.release();
         const [{ table1,datebegin, dateend, formtype }] = descriptionRows;
-
-        const DB=descriptionRows.databasename;
+        console.log(table1, datebegin, dateend, formtype)
+        console.log(descriptionRows)
+        const DB=descriptionRows[0].databasename;
         const [credential_rows] = await main_connection.query(
             'SELECT * FROM CredentialMaster WHERE databasename = ?',
             [DB]
@@ -791,7 +791,7 @@ router.post('/advancesearch', async (req, res) => {
         console.log("ccccccccccccc",columns.recordset[0].COLUMN_NAME);
         const firstcolname = columns.recordset[0].COLUMN_NAME;
         const tableRows = await pool.request().query(
-            `SELECT * FROM ${TABLE_TO_USE} WHERE ${firstcolname} >= ${datebegin} AND ${firstcolname} <= ${dateend} ORDER BY ${firstcolname} ASC`
+            `SELECT * FROM ${TABLE_TO_USE} WHERE ${firstcolname} >= '${datebegin}' AND ${firstcolname} <= '${dateend}' ORDER BY ${firstcolname} ASC`
         );
 
         // const [tableRows]=[];
@@ -819,9 +819,6 @@ router.post('/advancesearch', async (req, res) => {
         res.status(500).json({ message: 'Server Error' });
     }
 });
-
-
-
 
 router.post('/advancesearch2', async (req, res) => {
     try {
