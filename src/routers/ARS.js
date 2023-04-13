@@ -721,11 +721,18 @@ router.post('/advancesearch', async (req, res) => {
         const TABLE_TO_USE = req.body.tablename;
         const [rows] = await db_connection.query(`DESCRIBE ${TABLE_TO_USE}`);
         const columns = rows.map(row => row.Field);
+        
+
+       
 
         const [tableRows] = await db_connection.query(
             `SELECT * FROM ${TABLE_TO_USE} WHERE ${columns[0]} BETWEEN ? AND ? `,
             [datebegin, dateend]
         );
+        
+
+
+
         const finalArray = tableRows.map(row => {
             const filteredRow = {};
             Object.keys(row).forEach(key => {
