@@ -1002,7 +1002,7 @@ router.post('/advancesearch2', async (req, res) => {
             attributelist = tableRows[0];
         }
 
-        const response = { firstheader: setList, secondheader: normalList, body: finalArray, attributelist };
+        const response = { firstheader: setList, secondheader: normalList, body: tableRows, attributelist };
         res.json(response);
     }
     catch (error) {
