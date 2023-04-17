@@ -946,22 +946,22 @@ router.post('/advancesearch2', async (req, res) => {
         const tableRows = result.recordset;
         // console.log(tableRows);
 
-        const finalArray = tableRows.map(row => {
-            const filteredRow = {};
-            Object.keys(row).forEach(key => {
-                if (key === `${firstcolname}` || attributes.includes(key)) {
-                    filteredRow[key] = row[key];}
-            });
+        // const finalArray = tableRows.map(row => {
+        //     const filteredRow = {};
+        //     Object.keys(row).forEach(key => {
+        //         if (key === `${firstcolname}` || attributes.includes(key)) {
+        //             filteredRow[key] = row[key];}
+        //     });
 
-            return filteredRow;
-        });
+        //     return filteredRow;
+        // });
 
         var attributelist = [];
         if (tableRows.length > 0) {
             attributelist = tableRows[0];
         }
 
-        const response = { firstheader: setList, secondheader: normalList, body: finalArray, attributelist };
+        const response = { firstheader: setList, secondheader: normalList, body: tableRows, attributelist };
         res.json(response);
     }
     catch (error) {
