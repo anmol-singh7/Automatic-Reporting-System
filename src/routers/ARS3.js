@@ -690,11 +690,12 @@ router.post('/advancesearch', async (req, res) => {
         }
         // Get datebegin, dateend, and reporttype from Description table
         const [descriptionRows] = await main_connection.query(
-            'SELECT databasename,table1,datebegin, dateend, formtype FROM DescriptionMaster WHERE reportid = ?',
+            'SELECT databasename,table1,datebegin,timebegin, dateend,timeend, formtype FROM DescriptionMaster WHERE reportid = ?',
             [reportid]
         );
         main_connection.release();
-        const [{ table1,datebegin, dateend, formtype }] = descriptionRows;
+        const [{ table1,datebegin,timebegin, dateend,timeend, formtype }] = descriptionRows;
+        console.log(timebegin,timeend);
         console.log(table1, datebegin, dateend, formtype)
         console.log(descriptionRows)
         const DB=descriptionRows[0].databasename;
@@ -707,19 +708,12 @@ router.post('/advancesearch', async (req, res) => {
             main_connection.release();
             return res.status(404).json({ message: 'Credentials not found' });
         }
-
-        // Extract the required database connection credentials from the retrieved row 
         const { hostofdatabase, userofdatabase, passwordofdatabase, databasename, waitForConnections, connectionLimit, queueLimit } = credential_rows[0];
-
-        
-        // Get SetPointList and NormalPointList from Set_Points and Normal_Points tables
         const [setPointRows] = await main_connection.query(
             'SELECT sensorname FROM Set_Points WHERE reportid = ? ORDER BY IF(order1 = 0, NULL, order1), sensorname ASC',
             [reportid]
         );
         main_connection.release();
-
-
         const [normalPointRows] = await main_connection.query(
             'SELECT sensorname,attribute FROM Normal_Points WHERE reportid = ? ORDER BY IF(order1 = 0, NULL, order1), sensorname ASC',
             [reportid]
@@ -750,9 +744,7 @@ router.post('/advancesearch', async (req, res) => {
             main_connection.release();
      
             normalList1 = normalPointList.map(sensorname => normalListRows.find(row => row.sensorname === sensorname));
- 
-
-            for (const obj1 of normalList1) {
+             for (const obj1 of normalList1) {
                 for (const obj2 of normalPointRows) {
                     if (obj1.sensorname === obj2.sensorname) {
                         obj1.attribute = obj2.attribute;
@@ -764,10 +756,6 @@ router.post('/advancesearch', async (req, res) => {
         // console.log("wwwwwwwwwwwwwww",normalList)
         const attributes = normalPointRows.map(row => row.attribute);;
         main_connection.release();
-
-        // const { hostofdatabase, userofdatabase, passwordofdatabase, databasename } = credential_rows[0];
-
-        // Connect to the SQL Server using the retrieved credentials
         const config = {
             user: userofdatabase,
             password: passwordofdatabase,
@@ -777,29 +765,17 @@ router.post('/advancesearch', async (req, res) => {
             trustServerCertificate: true // Allow self-signed certificates
         };
         const pool = await sql.connect(config);
-
         const TABLE_TO_USE = table1;
         // const [rows] = await db_connection.query(`DESCRIBE ${TABLE_TO_USE}`);
         const columns = await pool.request()
             .query(`SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '${TABLE_TO_USE}'`);
-        console.log("ccccccccccccc",columns.recordset[0].COLUMN_NAME);
-
-        const firstcolname = columns.recordset[0].COLUMN_NAME;
-        console.log("first",firstcolname);
-      
+        const firstcolname = columns.recordset[0].COLUMN_NAME;     
         const result = await pool.request()
-            .input('datebegin', sql.VarChar, datebegin + 'T00:00:00.000Z')
-            .input('dateend', sql.VarChar, dateend + 'T23:59:59.999Z')
+            .input('datebegin', sql.VarChar, datebegin + 'T'+timebegin+':00.000Z')
+            .input('dateend', sql.VarChar, dateend + 'T' +timeend+':59.999Z')
             .query(`SELECT * FROM ${TABLE_TO_USE} WHERE ${firstcolname} BETWEEN @datebegin AND @dateend`);
 
         const tableRows = result.recordset;
-
-
-
-
-
-
-
         // let tableRows = [];
 
         // const getColumnTypeQuery = `SELECT DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '${TABLE_TO_USE}' AND COLUMN_NAME = '${firstcolname}'`;
@@ -850,21 +826,6 @@ router.post('/advancesearch', async (req, res) => {
        
 
         // The tableRows variable is now available for use outside of the request method
-        console.log(tableRows);
-
-
-
-
-
-
-
-
-
-
-        
-
-        // const [tableRows]=[];
-        // console.log(tableRows);
         const finalArray = tableRows.map(row => {
             const filteredRow = {};
             Object.keys(row).forEach(key => {
@@ -872,14 +833,12 @@ router.post('/advancesearch', async (req, res) => {
                     filteredRow[key] = row[key];
                 }
             });
-
             return filteredRow;
         });
         var attributelist = [];
         if (tableRows.length > 0) {
             attributelist = tableRows[0];
         }
-
         const response = { firstheader: setList, secondheader: normalList, body: finalArray, attributelist };
         res.json(response);
     }
@@ -987,22 +946,22 @@ router.post('/advancesearch2', async (req, res) => {
         const tableRows = result.recordset;
         // console.log(tableRows);
 
-        // const finalArray = tableRows.map(row => {
-        //     const filteredRow = {};
-        //     Object.keys(row).forEach(key => {
-        //         if (key === `${firstcolname}` || attributes.includes(key)) {
-        //             filteredRow[key] = row[key];}
-        //     });
+        const finalArray = tableRows.map(row => {
+            const filteredRow = {};
+            Object.keys(row).forEach(key => {
+                if (key === `${firstcolname}` || attributes.includes(key)) {
+                    filteredRow[key] = row[key];}
+            });
 
-        //     return filteredRow;
-        // });
+            return filteredRow;
+        });
 
         var attributelist = [];
         if (tableRows.length > 0) {
             attributelist = tableRows[0];
         }
 
-        const response = { firstheader: setList, secondheader: normalList, body: tableRows, attributelist };
+        const response = { firstheader: setList, secondheader: normalList, body: finalArray, attributelist };
         res.json(response);
     }
     catch (error) {
