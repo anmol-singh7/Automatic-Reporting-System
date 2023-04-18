@@ -744,13 +744,14 @@ router.post('/advancesearch', async (req, res) => {
             main_connection.release();
      
             normalList1 = normalPointList.map(sensorname => normalListRows.find(row => row.sensorname === sensorname));
-             for (const obj1 of normalList1) {
-                for (const obj2 of normalPointRows) {
+            for (const obj1 of normalList1) {
+                 for (const obj2 of normalPointRows) {
                     if (obj1.sensorname === obj2.sensorname) {
                         obj1.attribute = obj2.attribute;
+                        break;
                     }
                 }
-                normalList.push(obj1);
+               normalList.push(obj1);
             }
         }
         // console.log("wwwwwwwwwwwwwww",normalList)
@@ -836,6 +837,7 @@ router.post('/advancesearch', async (req, res) => {
             return filteredRow;
         });
         var attributelist = [];
+
         if (tableRows.length > 0) {
             attributelist = tableRows[0];
         }
@@ -910,12 +912,16 @@ router.post('/advancesearch2', async (req, res) => {
             main_connection.release();
             normalList1 = normalPointList.map(sensorname => normalListRows.find(row => row.sensorname === sensorname));
             for (const obj1 of normalList1) {
+                var order1=0;
                 for (const obj2 of normalPointRows) {
                     if (obj1.sensorname === obj2.sensorname) {
                         obj1.attribute = obj2.attribute;
+                        order1=obj2.order1;
+                        break;
                     }
                 }
-                normalList.push(obj1);
+                const ob={...obj1,order1}
+                normalList.push(ob);
             }
         }
 
@@ -933,30 +939,14 @@ router.post('/advancesearch2', async (req, res) => {
         const pool = await sql.connect(config);
 
         const TABLE_TO_USE = table1;
-        // const [rows] = await db_connection.query(`DESCRIBE ${TABLE_TO_USE}`);
         const columns = await pool.request()
             .query(`SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '${TABLE_TO_USE}'`);
-        // console.log("ccccccccccccc", columns.recordset[0].COLUMN_NAME);
-
+   
         const firstcolname = columns.recordset[0].COLUMN_NAME;
-        // console.log("first", firstcolname);
-
         const result = await pool.request().query(`SELECT * FROM ${TABLE_TO_USE} ORDER BY ${firstcolname} ASC`);
 
         const tableRows = result.recordset;
-        // console.log(tableRows);
-
-        // const finalArray = tableRows.map(row => {
-        //     const filteredRow = {};
-        //     Object.keys(row).forEach(key => {
-        //         if (key === `${firstcolname}` || attributes.includes(key)) {
-        //             filteredRow[key] = row[key];}
-        //     });
-
-        //     return filteredRow;
-        // });
-
-        var attributelist = [];
+          var attributelist = [];
         if (tableRows.length > 0) {
             attributelist = tableRows[0];
         }
@@ -1330,5 +1320,49 @@ router.patch('/updateDescription', async (req, res) => {
         res.status(500).json({ message: 'Server Error' });
     }
 });
+
+router.get('/getfilter', async (req, res) => {
+    try {
+        const { reportid } = req.body;
+
+        // Get a connection from the pool
+        const connection = await getConnection();
+
+        const query = 'SELECT filter1 FROM FilterMaster WHERE reportid = ?';
+        const [rows] = await connection.execute(query, [reportid]);
+
+        // Release the connection back to the pool
+        connection.release();
+
+        if (rows.length === 0) {
+            // If no matching row was found, return a 404 Not Found response
+            res.json({});
+        } else {
+            // If a matching row was found, extract the filter JSON and return it in the response
+            const filter = rows[0].filter;
+            res.json(JSON.parse(filter));
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
+router.post('/addfilter', async (req, res) => {
+    try {
+        const { reportid, filter1 } = req.body;
+        const connection = await getConnection();
+        console.log(reportid, filter1);
+        const query = 'INSERT INTO FilterMaster (reportid, filter1) VALUES (?, ?)'
+        const [result] = await connection.query(query, [reportid, JSON.stringify(filter1)]);
+
+        connection.release();
+        res.json({ message: 'Filter added successfully!' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
 
 module.exports = router;
