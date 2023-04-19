@@ -837,15 +837,20 @@ router.post('/advancesearch', async (req, res) => {
        
 
         // The tableRows variable is now available for use outside of the request method
-        const finalArray = tableRows.map(row => {
-            const filteredRow = {};
-            Object.keys(row).forEach(key => {
-                if (key === `${firstcolname}` || attributes.includes(key)) {
-                    filteredRow[key] = row[key];
-                }
-            });
-            return filteredRow;
-        });
+      
+      
+      
+      
+        // const finalArray = tableRows.map(row => {
+        //     const filteredRow = {};
+        //     Object.keys(row).forEach(key => {
+        //         if (key === `${firstcolname}` || attributes.includes(key)) {
+        //             filteredRow[key] = row[key];
+        //         }
+        //     });
+        //     return filteredRow;
+        // });
+
         var attributelist = [];
 
         if (tableRows.length > 0) {
@@ -853,7 +858,7 @@ router.post('/advancesearch', async (req, res) => {
         }
 
         
-        const response = { firstheader: setList, secondheader: normalList, body: finalArray, attributelist,setdata };
+        const response = { firstheader: setList, secondheader: normalList, body: tableRows, attributelist,setdata };
         res.json(response);
     }
     catch (error) {
