@@ -709,11 +709,21 @@ router.post('/advancesearch', async (req, res) => {
             return res.status(404).json({ message: 'Credentials not found' });
         }
         const { hostofdatabase, userofdatabase, passwordofdatabase, databasename, waitForConnections, connectionLimit, queueLimit } = credential_rows[0];
+        
+        const query = "SELECT setdata FROM SetPointData WHERE reportid = ?";
+        const [setrow] = await main_connection.query(query, [reportid]);
+        main_connection.release();
+        var setdata = [[]];
+        if (setrow.length > 0) {
+            setdata=setrow;
+        }
+
         const [setPointRows] = await main_connection.query(
             'SELECT sensorname FROM Set_Points WHERE reportid = ? ORDER BY IF(order1 = 0, NULL, order1), sensorname ASC',
             [reportid]
         );
         main_connection.release();
+        
         const [normalPointRows] = await main_connection.query(
             'SELECT sensorname,attribute FROM Normal_Points WHERE reportid = ? ORDER BY IF(order1 = 0, NULL, order1), sensorname ASC',
             [reportid]
@@ -841,7 +851,9 @@ router.post('/advancesearch', async (req, res) => {
         if (tableRows.length > 0) {
             attributelist = tableRows[0];
         }
-        const response = { firstheader: setList, secondheader: normalList, body: finalArray, attributelist };
+
+        
+        const response = { firstheader: setList, secondheader: normalList, body: finalArray, attributelist,setdata };
         res.json(response);
     }
     catch (error) {
