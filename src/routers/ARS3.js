@@ -1329,7 +1329,7 @@ router.get('/getfilter', async (req, res) => {
         const connection = await getConnection();
 
         const query = 'SELECT filter1 FROM FilterMaster WHERE reportid = ?';
-        const [rows] = await connection.execute(query, [reportid]);
+        const [rows] = await connection.query(query, [reportid]);
 
         // Release the connection back to the pool
         connection.release();
@@ -1339,8 +1339,8 @@ router.get('/getfilter', async (req, res) => {
             res.json({});
         } else {
             // If a matching row was found, extract the filter JSON and return it in the response
-            const filter = rows[0].filter;
-            res.json(JSON.parse(filter));
+            const filter = rows[0].filter1;
+            res.json(filter);
         }
     } catch (error) {
         console.error(error);
