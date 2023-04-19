@@ -695,9 +695,9 @@ router.post('/advancesearch', async (req, res) => {
         );
         main_connection.release();
         const [{ table1,datebegin,timebegin, dateend,timeend, formtype }] = descriptionRows;
-        console.log(timebegin,timeend);
-        console.log(table1, datebegin, dateend, formtype)
-        console.log(descriptionRows)
+        // console.log(timebegin,timeend);
+        // console.log(table1, datebegin, dateend, formtype)
+        // console.log(descriptionRows)
         const DB=descriptionRows[0].databasename;
         const [credential_rows] = await main_connection.query(
             'SELECT * FROM CredentialMaster WHERE databasename = ?',
@@ -863,8 +863,8 @@ router.post('/advancesearch2', async (req, res) => {
         );
         main_connection.release();
         const [{ table1, datebegin, dateend, formtype }] = descriptionRows;
-        console.log(table1, datebegin, dateend, formtype)
-        console.log(descriptionRows)
+        // console.log(table1, datebegin, dateend, formtype)
+        // console.log(descriptionRows)
         const DB = descriptionRows[0].databasename;
         const [credential_rows] = await main_connection.query(
             'SELECT * FROM CredentialMaster WHERE databasename = ?',
@@ -1321,7 +1321,7 @@ router.patch('/updateDescription', async (req, res) => {
     }
 });
 
-router.get('/getfilter', async (req, res) => {
+router.post('/getfilter', async (req, res) => {
     try {
         const { reportid } = req.body;
 
