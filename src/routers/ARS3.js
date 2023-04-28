@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const mysql = require('mysql2/promise');
 const sql = require('mssql');
-const { getConnection } = require('../db/connection');
+const { getConnection } = require('../db/Mysqlconnection');
 
 router.post('/addCredential', async (req, res) => {
     try {
@@ -137,9 +137,10 @@ router.post('/addusers', async (req, res) => {
         if (!username || !employid || !usertype || !email || !password || !userstatus) {
             return res.status(400).json({ message: 'Invalid request' });
         }
+        const userr = usertype.toLowerCase();
         const result = await connection.query(
             'INSERT INTO UserMaster ( username, employid, department,usertype,phonenumber, email, passwor,userstatus ) VALUES (?, ?, ?, ?, ?, ?, ?,?)',
-            [username, employid, department, usertype, phonenumber, email, password, userstatus]
+            [username, employid, department, userr, phonenumber, email, password, userstatus]
         );
         connection.release();
         res.json({ message: 'User added successfully' });
@@ -148,6 +149,30 @@ router.post('/addusers', async (req, res) => {
         res.status(500).json({ message: 'Server Error' });
     }
 });
+
+router.post('/login', async (req, res) => {
+    const { email, password } = req.body;
+    try {
+        const connection = getConnection();
+        if (!email || !password) {
+            return null;
+        }
+        const [rows] = await connection.query('SELECT email,passwor,usertype,userstatus FROM UserMaster WHERE userstatus="active"');
+        connection.release();
+        const result = rows.filter((user) => user.userstatus !== 'active' && user.email !== email && user.passwor !== password);
+        if (result.length === 0) {
+            res.json({ usertype: null });
+        }
+        else {
+            const usertype = result[0].usertype;
+            res.json({ usertype });
+        }
+    }
+    catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+})
 
 router.get('/users', async (req, res) => {
     try {
@@ -306,7 +331,6 @@ router.post('/description/reportid', async (req, res) => {
         const clientid = result[0].clientid;
         const [result2] = await connection.query(`SELECT clientname FROM CredentialMaster WHERE clientid=?`, [clientid])
         const [rows] = await connection.query(`SELECT reportid FROM DescriptionMaster WHERE reportid = ?`, [reportid]);
-        console.log(rows)
         const nextversion = rows.length;
 
         connection.release();
@@ -365,7 +389,7 @@ router.post('/attributes', async (req, res) => {
         // Get the client ID and table name from the request body
         const DB = req.body.databasename;
 
-        const tablename=req.body.tablename;
+        const tablename = req.body.tablename;
         // Connect to the main database and retrieve the credentials for the specified client ID
         const main_connection = await getConnection();
         const [credential_rows] = await main_connection.query(
@@ -410,41 +434,6 @@ router.post('/attributes', async (req, res) => {
     }
 });
 
-
-// router.post('/uniqueformtypes', async (req, res) => {
-//     try {
-//         const { databasename, tablename } = req.body;
-//         const connection = await getConnection();
-//         let [rows] = await connection.query(`SELECT * FROM sensorlist`);
-//         connection.release();
-//         if (rows.length === 0) {
-//             res.json({ formtypes: [], nextformtype: "F1" })
-//         }
-//         else {
-//             let [rows2] = await connection.query(`SELECT DISTINCT formtype FROM sensorlist WHERE databasename = ? AND tablename = ?`, [databasename, tablename]);
-//             connection.release();
-//             const formtypes = rows2.map((row) => row.formtype);
-
-//             const [result] = await connection.query(`SELECT MAX(formtype) AS maxformtype FROM sensorlist`);
-//             const maxformtype = result[0].maxformtype;
-//             let nextformtype;
-//             if (maxformtype) {
-//                 const num = parseInt(maxformtype.substring(1)) + 1;
-//                 nextformtype = `F${num}`;
-//             } else {
-//                 nextformtype = 'F1';
-//             }
-
-//             res.json({ formtypes, nextformtype });
-//         }
-//     } catch (error) {
-//         console.error(error);
-//         res.status(500).json({ message: 'Server Error' });
-//     }
-// });
-
-// const sql = require('mssql');
-
 router.post('/uniqueformtypes', async (req, res) => {
     try {
         const tablename = req.body.tablename;
@@ -468,11 +457,11 @@ router.post('/uniqueformtypes', async (req, res) => {
                 const num = parseInt(maxformtype.substring(1)) + 1;
                 // nextformtype = `F${num}`;
                 // console.log(num)
-                if(num!==NaN){
-                    nextformtype="F1";
+                if (num !== NaN) {
+                    nextformtype = "F1";
                 }
-                else{
-                   nextformtype = `F${num}`;
+                else {
+                    nextformtype = `F${num}`;
                 }
             } else {
                 nextformtype = 'F1';
@@ -504,8 +493,8 @@ router.post('/uniqueformtypes', async (req, res) => {
             // console.log(rows3[0],typeof(rows3[0]));
             let arr = Object.getOwnPropertyNames(rows3[0]);
             // console.log('ttttttttt',arr)
-            const { recordset: result1} = await pool.request().query(`SELECT MAX(${arr[0]}) AS max_value FROM ${tablename}`);
-            const { recordset: result2} = await pool.request().query(`SELECT MIN(${arr[0]}) AS min_value FROM ${tablename}`);
+            const { recordset: result1 } = await pool.request().query(`SELECT MAX(${arr[0]}) AS max_value FROM ${tablename}`);
+            const { recordset: result2 } = await pool.request().query(`SELECT MIN(${arr[0]}) AS min_value FROM ${tablename}`);
 
             await pool.close();
             // console.log(result1,result2);
@@ -520,41 +509,6 @@ router.post('/uniqueformtypes', async (req, res) => {
         res.status(500).json({ message: 'Server Error' });
     }
 });
-
-// const [result1] = await pool.request().query(`SELECT MAX(${rows3[0].columns[0]}) AS max_value FROM ${tablename}`);
-// const [result2] = await pool.request().query(`SELECT MIN(${rows3[0].columns[0]}) AS min_value FROM ${tablename}`);
-
-
-// router.post('/uniqueformtypes2', async (req, res) => {
-//     try {
-//         const { databasename, tablename } = req.body;
-//         const connection = await getConnection();
-//         let [rows] = await connection.query(`SELECT * FROM sensorlist`);
-//         connection.release();
-//         if (rows.length === 0) {
-//             res.json({ formtypes: [], nextformtype: "F1" })
-//         }
-//         else {
-//             let [rows2] = await connection.query(`SELECT DISTINCT formtype FROM sensorlist WHERE databasename = ? AND tablename = ?`, [databasename, tablename]);
-//             connection.release();
-//             const formtypes = rows2.map((row) => row.formtype);
-
-//             const [result] = await connection.query(`SELECT MAX(formtype) AS maxformtype FROM sensorlist`);
-//             const maxformtype = result[0].maxformtype;
-//             let nextformtype;
-//             if (maxformtype) {
-//                 const num = parseInt(maxformtype.substring(1)) + 1;
-//                 nextformtype = `F${num}`;
-//             } else {
-//                 nextformtype = 'F1';
-//             }
-//             res.json({ formtypes, nextformtype });
-//         }
-//     } catch (error) {
-//         console.error(error);
-//         res.status(500).json({ message: 'Server Error' });
-//     }
-// });
 
 router.post('/addsensors', async (req, res) => {
     try {
@@ -694,11 +648,8 @@ router.post('/advancesearch', async (req, res) => {
             [reportid]
         );
         main_connection.release();
-        const [{ table1,datebegin,timebegin, dateend,timeend, formtype }] = descriptionRows;
-        // console.log(timebegin,timeend);
-        // console.log(table1, datebegin, dateend, formtype)
-        // console.log(descriptionRows)
-        const DB=descriptionRows[0].databasename;
+        const [{ table1, datebegin, timebegin, dateend, timeend, formtype }] = descriptionRows;
+        const DB = descriptionRows[0].databasename;
         const [credential_rows] = await main_connection.query(
             'SELECT * FROM CredentialMaster WHERE databasename = ?',
             [DB]
@@ -709,13 +660,13 @@ router.post('/advancesearch', async (req, res) => {
             return res.status(404).json({ message: 'Credentials not found' });
         }
         const { hostofdatabase, userofdatabase, passwordofdatabase, databasename, waitForConnections, connectionLimit, queueLimit } = credential_rows[0];
-        
+
         const query = "SELECT setdata FROM SetPointData WHERE reportid = ?";
         const [setrow] = await main_connection.query(query, [reportid]);
         main_connection.release();
         var setdata = [[]];
         if (setrow.length > 0) {
-            setdata=setrow;
+            setdata = setrow;
         }
 
         const [setPointRows] = await main_connection.query(
@@ -723,7 +674,7 @@ router.post('/advancesearch', async (req, res) => {
             [reportid]
         );
         main_connection.release();
-        
+
         const [normalPointRows] = await main_connection.query(
             'SELECT sensorname,attribute FROM Normal_Points WHERE reportid = ? ORDER BY IF(order1 = 0, NULL, order1), sensorname ASC',
             [reportid]
@@ -752,19 +703,18 @@ router.post('/advancesearch', async (req, res) => {
                 [formtype, ...normalPointList]
             );
             main_connection.release();
-     
+
             normalList1 = normalPointList.map(sensorname => normalListRows.find(row => row.sensorname === sensorname));
             for (const obj1 of normalList1) {
-                 for (const obj2 of normalPointRows) {
+                for (const obj2 of normalPointRows) {
                     if (obj1.sensorname === obj2.sensorname) {
                         obj1.attribute = obj2.attribute;
                         break;
                     }
                 }
-               normalList.push(obj1);
+                normalList.push(obj1);
             }
         }
-        // console.log("wwwwwwwwwwwwwww",normalList)
         const attributes = normalPointRows.map(row => row.attribute);;
         main_connection.release();
         const config = {
@@ -780,85 +730,21 @@ router.post('/advancesearch', async (req, res) => {
         // const [rows] = await db_connection.query(`DESCRIBE ${TABLE_TO_USE}`);
         const columns = await pool.request()
             .query(`SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '${TABLE_TO_USE}'`);
-        const firstcolname = columns.recordset[0].COLUMN_NAME;     
+        const firstcolname = columns.recordset[0].COLUMN_NAME;
         const result = await pool.request()
-            .input('datebegin', sql.VarChar, datebegin + 'T'+timebegin+':00.000Z')
-            .input('dateend', sql.VarChar, dateend + 'T' +timeend+':59.999Z')
+            .input('datebegin', sql.VarChar, datebegin + 'T' + timebegin + ':00.000Z')
+            .input('dateend', sql.VarChar, dateend + 'T' + timeend + ':59.999Z')
             .query(`SELECT * FROM ${TABLE_TO_USE} WHERE ${firstcolname} BETWEEN @datebegin AND @dateend`);
 
         const tableRows = result.recordset;
-        // let tableRows = [];
-
-        // const getColumnTypeQuery = `SELECT DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '${TABLE_TO_USE}' AND COLUMN_NAME = '${firstcolname}'`;
-        
-        // const request = pool.request();
-        // request.query(getColumnTypeQuery, (err, result) => {
-        //     if (err) {
-        //         console.error('Error retrieving column data type', err);
-        //         tableRows = [];
-        //     } else {
-        //         const columnType = result.recordset[0].DATA_TYPE;
-        //         console.log("eeeeeeeeeeeeeeeeeeeee", columnType);
-        //         let dateBeginParam, dateEndParam;
-
-        //         // Convert datebegin and dateend to the appropriate data type
-        //         if (columnType === 'datetime') {
-        //             dateBeginParam = new Date(datebegin).toISOString();
-
-        //             const x = new Date(dateend);
-        //                   x.setUTCHours(0, 0, 0, 0); // Set to the start of the day in UTC time
-        //                   x.setUTCDate(x.getUTCDate() + 1); // Set to the start of the next day in UTC time
-        //                   x.setUTCMilliseconds(x.getUTCMilliseconds() - 1); // Subtract one millisecond
-        //                 //   console.log(x.toISOString());
-
-        //             dateEndParam = x.toISOString();
-        //         } else if (columnType === 'date') {
-        //             dateBeginParam = new Date(datebegin).toISOString().substring(0, 10);
-        //             dateEndParam = new Date(dateend).toISOString().substring(0, 10);
-        //         } else {
-        //             dateBeginParam = datebegin;
-        //             dateEndParam = dateend;
-        //         }
-        //         console.log(dateBeginParam, dateEndParam);
-        //         // Execute the query with the appropriate parameter types
-        //         const query = `SELECT * FROM ${TABLE_TO_USE} WHERE ${firstcolname} BETWEEN ${dateBeginParam} AND ${dateEndParam}`;
-        //         console.log("qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq",query);
-        //         request.query(query, (err, result) => {
-        //             if (err) {
-        //                 console.error('Error executing query', err);
-        //                 tableRows = [];
-        //             } else {
-        //                 console.log(result.recordset);
-        //                 tableRows = result.recordset;
-        //             }
-        //         });
-        //     }
-        // });
-       
-
-        // The tableRows variable is now available for use outside of the request method
-      
-      
-      
-      
-        // const finalArray = tableRows.map(row => {
-        //     const filteredRow = {};
-        //     Object.keys(row).forEach(key => {
-        //         if (key === `${firstcolname}` || attributes.includes(key)) {
-        //             filteredRow[key] = row[key];
-        //         }
-        //     });
-        //     return filteredRow;
-        // });
-
         var attributelist = [];
 
         if (tableRows.length > 0) {
             attributelist = tableRows[0];
         }
 
-        
-        const response = { firstheader: setList, secondheader: normalList, body: tableRows, attributelist,setdata };
+
+        const response = { firstheader: setList, secondheader: normalList, body: tableRows, attributelist, setdata };
         res.json(response);
     }
     catch (error) {
@@ -880,8 +766,6 @@ router.post('/advancesearch2', async (req, res) => {
         );
         main_connection.release();
         const [{ table1, datebegin, dateend, formtype }] = descriptionRows;
-        // console.log(table1, datebegin, dateend, formtype)
-        // console.log(descriptionRows)
         const DB = descriptionRows[0].databasename;
         const [credential_rows] = await main_connection.query(
             'SELECT * FROM CredentialMaster WHERE databasename = ?',
@@ -929,15 +813,15 @@ router.post('/advancesearch2', async (req, res) => {
             main_connection.release();
             normalList1 = normalPointList.map(sensorname => normalListRows.find(row => row.sensorname === sensorname));
             for (const obj1 of normalList1) {
-                var order1=0;
+                var order1 = 0;
                 for (const obj2 of normalPointRows) {
                     if (obj1.sensorname === obj2.sensorname) {
                         obj1.attribute = obj2.attribute;
-                        order1=obj2.order1;
+                        order1 = obj2.order1;
                         break;
                     }
                 }
-                const ob={...obj1,order1}
+                const ob = { ...obj1, order1 }
                 normalList.push(ob);
             }
         }
@@ -958,12 +842,12 @@ router.post('/advancesearch2', async (req, res) => {
         const TABLE_TO_USE = table1;
         const columns = await pool.request()
             .query(`SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '${TABLE_TO_USE}'`);
-   
+
         const firstcolname = columns.recordset[0].COLUMN_NAME;
         const result = await pool.request().query(`SELECT * FROM ${TABLE_TO_USE} ORDER BY ${firstcolname} ASC`);
 
         const tableRows = result.recordset;
-          var attributelist = [];
+        var attributelist = [];
         if (tableRows.length > 0) {
             attributelist = tableRows[0];
         }
@@ -1322,7 +1206,7 @@ router.patch('/updateDescription', async (req, res) => {
         const { reportid, systems, manufacturer, datebegin, dateend, timebegin, timeend, status1, reportname } = req.body;
         const connection = await getConnection();
         if (
-             !datebegin || !timebegin || !dateend || !timeend || !status1 || !reportname ) {
+            !datebegin || !timebegin || !dateend || !timeend || !status1 || !reportname) {
             return res.status(400).json({ message: 'Invalid request' });
         }
         const query = "UPDATE DescriptionMaster SET systems = ?, manufacturer = ?, datebegin = ?, dateend = ?, timebegin = ?, timeend = ?, status1 = ?, reportname = ? WHERE reportid = ?";
@@ -1369,7 +1253,6 @@ router.post('/addfilter', async (req, res) => {
     try {
         const { reportid, filter1 } = req.body;
         const connection = await getConnection();
-        console.log(reportid, filter1);
         const query = 'INSERT INTO FilterMaster (reportid, filter1) VALUES (?, ?)'
         const [result] = await connection.query(query, [reportid, JSON.stringify(filter1)]);
 

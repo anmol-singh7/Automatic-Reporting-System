@@ -1,8 +1,13 @@
+
+
+//this part is just for testing purpose to add security checks 
+
+
 const express = require('express');
 const router = express.Router();
 const sql = require('mssql');
 const { body, validationResult } = require('express-validator');
-const { getConnection } = require('../db/connection');
+const { getConnection } = require('../db/Mysqlconnection');
 
 router.post('/addCredential', async (req, res) => {
     try {
