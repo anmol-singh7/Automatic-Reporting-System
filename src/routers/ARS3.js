@@ -1009,10 +1009,11 @@ router.post('/getsetdata/reportid', async (req, res) => {
     }
 });
 
-router.get('/reports', async (req, res) => {
+router.post('/reports', async (req, res) => {
     try {
+        const {userid} =req.body;
         const connection = await getConnection();
-        const [rows] = await connection.query('SELECT reportid,version, reportname, datebegin,databasename,table1, status1 FROM DescriptionMaster');
+        const [rows] = await connection.query(`SELECT reportid,version, reportname, datebegin,databasename,table1, status1 FROM DescriptionMaster WHERE userid=?`,[userid]);
         connection.release();
         res.json(rows);
     } catch (error) {
