@@ -150,29 +150,29 @@ router.post('/addusers', async (req, res) => {
     }
 });
 
-router.post('/login', async (req, res) => {
-    const { email, password } = req.body;
-    try {
-        const connection = getConnection();
-        if (!email || !password) {
-            return null;
-        }
-        const [rows] = await connection.query('SELECT email,passwor,usertype,userstatus FROM UserMaster WHERE userstatus="active"');
-        connection.release();
-        const result = rows.filter((user) => user.userstatus !== 'active' && user.email !== email && user.passwor !== password);
-        if (result.length === 0) {
-            res.json({ usertype: null });
-        }
-        else {
-            const usertype = result[0].usertype;
-            res.json({ usertype });
-        }
-    }
-    catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server Error' });
-    }
-})
+// router.post('/login', async (req, res) => {
+//     const { email, password } = req.body;
+//     try {
+//         const connection = getConnection();
+//         if (!email || !password) {
+//             return null;
+//         }
+//         const [rows] = await connection.query('SELECT email,passwor,usertype,userstatus FROM UserMaster WHERE userstatus="active"');
+//         connection.release();
+//         const result = rows.filter((user) => user.userstatus !== 'active' && user.email !== email && user.passwor !== password);
+//         if (result.length === 0) {
+//             res.json({ usertype: null });
+//         }
+//         else {
+//             const usertype = result[0].usertype;
+//             res.json({ usertype });
+//         }
+//     }
+//     catch (error) {
+//         console.error(error);
+//         res.status(500).json({ message: 'Server Error' });
+//     }
+// })
 
 router.get('/users', async (req, res) => {
     try {
@@ -185,6 +185,32 @@ router.get('/users', async (req, res) => {
         res.status(500).json({ message: 'Server Error' });
     }
 });
+
+router.post('/login', async (req, res) => {
+    const { email, password } = req.body;
+
+    try {
+        // Check if the email and password exist in the usermaster table
+        const connection = await getConnection();
+        // const query = 'SELECT userid, usertype FROM usermaster WHERE email = ? AND passwor = ? AND userstatus = "active"';
+        const [rows] = await connection.query(`SELECT userid, usertype FROM UserMaster WHERE email = ? AND passwor = ? AND userstatus = "active"`, [email, password]);
+        connection.release();
+
+        if (rows.length === 1) {
+            // Update the login status of the row to "online"
+            // const updateQuery = `UPDATE usermaster SET loginstatus = 1 WHERE userid = ?`;
+            await connection.query(`UPDATE UserMaster SET loginstatus = 1 WHERE userid = ?`, [rows[0].userid]);
+
+            res.json({ userid: rows[0].userid, usertype: rows[0].usertype });
+        } else {
+            res.json({ userid: -1, usertype: "NA" });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
 
 router.post('/addRole', async (req, res) => {
     const { roleid, rolename } = req.body;
