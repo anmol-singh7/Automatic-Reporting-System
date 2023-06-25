@@ -7,7 +7,7 @@ const bodyParser = require("body-parser");
 require("./db/Mysqlconnection");
 PORT = process.env.PORT || 3000;
 
-const ARS = require("./routers/ARS");
+const ARS = require("./routers/ARS2");
 const ARS3 = require("./routers/ARS3");
 
 const app = express();
