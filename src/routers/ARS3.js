@@ -434,6 +434,22 @@ router.post('/attributes', async (req, res) => {
     }
 });
 
+router.post('/uniquetables', async (req, res) => {
+    try {
+        const DB = req.body.databasename;
+        const connection = await getConnection();
+        // Get all rows from the table
+        let [rows] = await connection.query(`SELECT DISTINCT tablename FROM sensorlist WHERE databasename = ?`,[DB]);
+        connection.release();
+        let x = rows.map(row => row.tablename);
+        res.json(x);
+        
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
 router.post('/uniqueformtypes', async (req, res) => {
     try {
         const tablename = req.body.tablename;
