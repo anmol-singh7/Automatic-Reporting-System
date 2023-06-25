@@ -232,7 +232,7 @@ router.post('/description', async (req, res) => {
     try {
         const connection = await getConnection();
         if (
-            !userid || !clientid || !databasename || !table1) {
+            !userid || !clientid || !databasename || !table1 ||!formtype) {
             return res.status(400).json({ message: 'Invalid request' });
         }
         // Generate the codegeneratedVianumberrep
