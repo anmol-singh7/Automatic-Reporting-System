@@ -1093,9 +1093,9 @@ router.post('/getsetdata/reportid', async (req, res) => {
 
 router.post('/reports', async (req, res) => {
     try {
-        const {userid} =req.body;
+        const {creatorid} =req.body;
         const connection = await getConnection();
-        const [rows] = await connection.query(`SELECT reportid,version, reportname, datebegin,databasename,table1, status1 FROM DescriptionMaster WHERE userid=?`,[userid]);
+        const [rows] = await connection.query(`SELECT reportid,version, reportname, datebegin,databasename,table1, status1 FROM DescriptionMaster WHERE creatorid=?`,[creatorid]);
         connection.release();
         res.json(rows);
     } catch (error) {
