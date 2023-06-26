@@ -358,13 +358,13 @@ router.post('/description/reportid', async (req, res) => {
         const [result2] = await connection.query(`SELECT clientname FROM CredentialMaster WHERE clientid=?`, [clientid])
         const [rows] = await connection.query(`SELECT reportid FROM DescriptionMaster WHERE reportid = ?`, [reportid]);
         const nextversion = rows.length;
-        const response = {
+        const handlers = {
             Creator: {},
             Checker: {},
             Approver: {}
         };
         const [userids] = await connection.query(
-            `SELECT userid ,checkerid ,approverid  FROM DescriptionMaser WHERE reportid = ? `,
+            `SELECT creatorid ,checkerid ,approverid  FROM DescriptionMaster WHERE reportid = ? `,
             [reportid]
         );
 
@@ -372,24 +372,24 @@ router.post('/description/reportid', async (req, res) => {
             'SELECT username AS creatorname, userid AS creatorid FROM UserMaster WHERE userid = ? AND usertype = "creator"',
             [userids[0].creatorid]
         );
-        response.Creator = creatorRows[0] || { creatorname: '', creatorid: '' };
+        handlers.Creator = creatorRows[0] || { creatorname: '', creatorid: 0 };
 
         // Query for Checker
         const [checkerRows] = await connection.query(
             'SELECT username AS checkername, userid AS checkerid FROM UserMaster WHERE userid = ? AND usertype = "checker"',
             [userids[0].checkerid]
         );
-        response.Checker = checkerRows[0] || { checkername: '', checkerid: '' };
+        handlers.Checker = checkerRows[0] || { checkername: '', checkerid: 0 };
 
         // Query for Approver
         const [approverRows] = await connection.query(
             'SELECT username AS approvername, userid AS approverid FROM UserMaster WHERE userid = ? AND (usertype = "approver" OR usertype = "creator")',
             [userids[0].approverid]
         );
-        response.Approver = approverRows[0] || { approvername: '', approverid: '' };
+        handlers.Approver = approverRows[0] || { approvername: '', approverid: 0 };
 
         connection.release();
-        res.json({ result, clientname: result2[0].clientname, nextversion });
+        res.json({ result, clientname: result2[0].clientname, nextversion ,handlers});
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server Error' });
