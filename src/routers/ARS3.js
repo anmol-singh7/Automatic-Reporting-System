@@ -253,12 +253,12 @@ router.get('/roles', async (req, res) => {
 
 router.post('/description', async (req, res) => {
     const {
-        userid, reportid, utilityid, version, clientid, systems, manufacturer, datebegin, timebegin, dateend, timeend, timetype, databasename, table1, formtype, status1, prechandler, nexthandler, count, reportname } = req.body;
+        creatorid, reportid, utilityid, version, clientid, systems, manufacturer, datebegin, timebegin, dateend, timeend, timetype, databasename, table1, formtype, status1, checkerid, approverid, count, reportname } = req.body;
 
     try {
         const connection = await getConnection();
         if (
-            !userid || !clientid || !databasename || !table1 ||!formtype) {
+            !creatorid || !clientid || !databasename || !table1 ||!formtype) {
             return res.status(400).json({ message: 'Invalid request' });
         }
         // Generate the codegeneratedVianumberrep
@@ -311,7 +311,7 @@ router.post('/description', async (req, res) => {
         const result = await connection.query(
             'INSERT INTO DescriptionMaster (userid, reportid,utilityid,version,clientid,systems,manufacturer,datebegin,timebegin,dateend,timeend,timetype,databasename,table1,formtype,status1,prechandler,nexthandler,count,reportname) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?,?,?,?,?,?,?)',
             [
-                userid,
+                creatorid,
                 tempreportid,
                 tempreportid2,
                 version,
@@ -327,8 +327,8 @@ router.post('/description', async (req, res) => {
                 table1,
                 formtype,
                 status1,
-                prechandler,
-                nexthandler,
+                checkerid,
+                approverid,
                 count,
                 reportname
             ]
@@ -353,11 +353,40 @@ router.post('/description/reportid', async (req, res) => {
             return res.status(400).json({ message: 'Invalid request' });
         }
         const activity = "active"
-        const [result] = await connection.query(`SELECT clientid,systems,manufacturer,datebegin,timebegin,dateend,timeend,databasename,table1,formtype,status1,prechandler,nexthandler,count,reportname FROM DescriptionMaster WHERE reportid = ?`, [reportid]);
+        const [result] = await connection.query(`SELECT clientid,systems,manufacturer,datebegin,timebegin,dateend,timeend,databasename,table1,formtype,status1,count,reportname FROM DescriptionMaster WHERE reportid = ?`, [reportid]);
         const clientid = result[0].clientid;
         const [result2] = await connection.query(`SELECT clientname FROM CredentialMaster WHERE clientid=?`, [clientid])
         const [rows] = await connection.query(`SELECT reportid FROM DescriptionMaster WHERE reportid = ?`, [reportid]);
         const nextversion = rows.length;
+        const response = {
+            Creator: {},
+            Checker: {},
+            Approver: {}
+        };
+        const [userids] = await connection.query(
+            `SELECT userid ,checkerid ,approverid  FROM DescriptionMaser WHERE reportid = ? `,
+            [reportid]
+        );
+
+        const [creatorRows] = await connection.query(
+            'SELECT username AS creatorname, userid AS creatorid FROM UserMaster WHERE userid = ? AND usertype = "creator"',
+            [userids[0].creatorid]
+        );
+        response.Creator = creatorRows[0] || { creatorname: '', creatorid: '' };
+
+        // Query for Checker
+        const [checkerRows] = await connection.query(
+            'SELECT username AS checkername, userid AS checkerid FROM UserMaster WHERE userid = ? AND usertype = "checker"',
+            [userids[0].checkerid]
+        );
+        response.Checker = checkerRows[0] || { checkername: '', checkerid: '' };
+
+        // Query for Approver
+        const [approverRows] = await connection.query(
+            'SELECT username AS approvername, userid AS approverid FROM UserMaster WHERE userid = ? AND (usertype = "approver" OR usertype = "creator")',
+            [userids[0].approverid]
+        );
+        response.Approver = approverRows[0] || { approvername: '', approverid: '' };
 
         connection.release();
         res.json({ result, clientname: result2[0].clientname, nextversion });
@@ -366,6 +395,59 @@ router.post('/description/reportid', async (req, res) => {
         res.status(500).json({ message: 'Server Error' });
     }
 });
+
+
+router.post('/api/users', async (req, res) => {
+    try {
+        const { reportid } = req.body;
+
+        // Get database connection
+        const connection = await getConnection();
+
+        // Prepare the response object
+        const response = {
+            Creator: {},
+            Checker: {},
+            Approver: {}
+        };
+
+        // Query for Creator
+        const [userids] = await connection.query(
+            `SELECT userid ,checkerid ,approverid  FROM DescriptionMaser WHERE reportid = ? `,
+            [reportid]
+        );
+
+        const [creatorRows] = await connection.query(
+            'SELECT username AS creatorname, userid AS creatorid FROM UserMaster WHERE userid = ? AND usertype = "creator"',
+            [userids[0].creatorid]
+        );
+        response.Creator = creatorRows[0] || { creatorname: '', creatorid: '' };
+
+        // Query for Checker
+        const [checkerRows] = await connection.query(
+            'SELECT username AS checkername, userid AS checkerid FROM UserMaster WHERE userid = ? AND usertype = "checker"',
+            [userids[0].checkerid]
+        );
+        response.Checker = checkerRows[0] || { checkername: '', checkerid: '' };
+
+        // Query for Approver
+        const [approverRows] = await connection.query(
+            'SELECT username AS approvername, userid AS approverid FROM UserMaster WHERE userid = ? AND (usertype = "approver" OR usertype = "creator")',
+            [userids[0].approverid]
+        );
+        response.Approver = approverRows[0] || { approvername: '', approverid: '' };
+
+        // Release the connection back to the pool
+        connection.release();
+
+        res.json(response);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
+
 
 // const sql = require('mssql');
 router.post('/tables', async (req, res) => {
