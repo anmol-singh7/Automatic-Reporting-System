@@ -282,7 +282,7 @@ router.post('/description', async (req, res) => {
             const codegeneratedVianumberrep2 = cou2.toString().padStart(6, '0');
             // Generate the report ID
             const newdate = datebegin.slice(0, -16);
-            tempreportid2 = `${newdate}${clientid}${codegeneratedVianumberrep2}D_${databasename}T_${table1}F_${formtype}V_${version}_prev${prechandler}_C${count}_S${status1}`;
+            tempreportid2 = `${newdate}${clientid}${codegeneratedVianumberrep2}D_${databasename}T_${table1}F_${formtype}V_${version}_C${count}_S${status1}`;
         }
         // Generate the codegeneratedVianumberrep
         // const [countResult] = await connection.query(
