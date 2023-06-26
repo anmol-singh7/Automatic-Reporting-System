@@ -1104,6 +1104,19 @@ router.post('/reports', async (req, res) => {
     }
 });
 
+router.get('/allreports', async (req, res) => {
+    try {
+        
+        const connection = await getConnection();
+        const [rows] = await connection.query(`SELECT creatorid,approverid,checkerid,reportid,version, reportname, datebegin,databasename,table1, status1 FROM DescriptionMaster`,);
+        connection.release();
+        res.json(rows);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
 router.post('/sensors/inuse', async (req, res) => {
     try {
         const { sensornames } = req.body;
